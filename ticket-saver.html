@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ticket Saver — street cleaning, des Pins Ouest</title>
+<style>
+  * { box-sizing: border-box; }
+  :root {
+    --accent: #31c48d;
+    --ink: #24312c;
+    --muted: #5d6b64;
+    --card: #ffffff;
+    --page: #f4f6f4;
+    --line: #dde4de;
+    --amber-bg: #fdf3e3;
+    --amber-ink: #7c4a03;
+    --amber-line: #ecd9ac;
+    --now-bg: #fdeeda;
+    --now-ink: #8a3d00;
+    --soft-green: #e7f6ee;
+  }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+         margin: 0; padding: 16px; background: var(--page); color: var(--ink);
+         font-size: 18px; line-height: 1.5; }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 26px; margin: 4px 0 2px 0; line-height: 1.2; }
+  .sub { color: var(--muted); font-size: 17px; margin-bottom: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+          padding: 16px; margin-bottom: 14px; }
+  .banner { background: var(--amber-bg); border: 1px solid var(--amber-line);
+            color: var(--amber-ink); border-radius: 12px; padding: 12px 14px;
+            font-size: 16px; margin-bottom: 14px; }
+  .banner b { color: var(--amber-ink); }
+  .parked { background: var(--soft-green); border: 1px solid #bfe6cf; color: #14532d;
+            border-radius: 12px; padding: 12px 14px; font-size: 18px; margin-bottom: 14px; }
+  .parked .change { float: right; font-size: 15px; }
+  .label { color: var(--muted); font-size: 16px; }
+  .big { font-size: 34px; font-weight: 800; line-height: 1.15; }
+  .count { font-size: 44px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .now { background: var(--now-bg); border-color: #f3c98f; }
+  .now .count, .now .big { color: var(--now-ink); }
+  .sidebtn { display: block; width: 100%; text-align: left; background: var(--card);
+             border: 2px solid var(--line); border-radius: 14px; padding: 18px;
+             font-size: 20px; font-weight: 700; color: var(--ink); cursor: pointer;
+             margin-bottom: 12px; font-family: inherit; line-height: 1.3; }
+  .sidebtn small { display: block; font-size: 16px; font-weight: 400; color: var(--muted); margin-top: 4px; }
+  .sidebtn:hover, .sidebtn:focus-visible { transform: translateY(-2px); border-color: var(--accent);
+             box-shadow: 0 0 0 1px rgba(49,196,141,.35), 0 18px 50px rgba(49,196,141,.35), 0 8px 30px rgba(49,196,141,.25);
+             outline: none; }
+  .sidebtn.selected { background: var(--soft-green); border-color: var(--accent);
+             box-shadow: inset 2px 0 0 var(--accent); }
+  .sidebtn.selected:hover { transform: translateY(-2px);
+             box-shadow: inset 2px 0 0 var(--accent), 0 0 0 1px rgba(49,196,141,.35), 0 18px 50px rgba(49,196,141,.35), 0 8px 30px rgba(49,196,141,.25); }
+  button.action { font-size: 18px; font-weight: 700; padding: 14px 20px; border-radius: 12px;
+             border: 2px solid var(--line); background: var(--card); color: var(--ink);
+             cursor: pointer; font-family: inherit; }
+  button.action:hover, button.action:focus-visible { filter: brightness(1.08); transform: translateY(-1px);
+             border-color: var(--accent);
+             box-shadow: 0 0 0 1px rgba(49,196,141,.35), 0 18px 50px rgba(49,196,141,.35), 0 8px 30px rgba(49,196,141,.25);
+             outline: none; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .sign { background: #f7f8f7; border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0;
+          padding: 10px 12px; margin-top: 10px; font-size: 17px; }
+  .sign .fr { font-style: italic; }
+  .note { font-size: 16px; color: var(--muted); }
+  .warnline { font-size: 17px; color: var(--amber-ink); background: var(--amber-bg);
+              border: 1px solid var(--amber-line); border-radius: 8px; padding: 10px 12px; margin-top: 10px; }
+  .row { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
+  .row b { text-align: right; font-variant-numeric: tabular-nums; }
+  .foot { font-size: 15px; color: var(--muted); }
+  .foot a { color: inherit; }
+  .linkbtn { background: none; border: 0; padding: 0; font-size: 16px; color: var(--muted);
+             text-decoration: underline; cursor: pointer; font-family: inherit; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Ticket Saver</h1>
+  <div class="sub">Street cleaning — Avenue des Pins Ouest, Montr&eacute;al (near 1558)</div>
+
+  <div class="banner"><b>Provisional.</b> These windows come from City of Montr&eacute;al open
+  data (as of <span id="asOf">—</span>). The physical signs on this block have not been
+  photographed and matched to the data yet, and the city warns its data may differ from the
+  signs on the street. <b>Always check the sign where you park.</b></div>
+
+  <div id="parkedBanner" class="parked hidden">You&rsquo;re parked on: <b id="parkedSide">—</b>
+    <button class="linkbtn change" id="clearSide">Not parked here — clear</button>
+  </div>
+
+  <div class="card" id="gpsCard">
+    <div class="label">Your location</div>
+    <div id="gpsStatus" style="font-size:17px">Checking location&hellip;</div>
+    <button class="action" id="gpsBtn" style="margin-top:10px">Check my location</button>
+  </div>
+
+  <div class="card hidden" id="heroCard">
+    <div class="label" id="heroLabel">Next cleaning window — your parked side</div>
+    <div class="big" id="heroTitle">—</div>
+    <div class="count" id="heroCount">—</div>
+    <div id="heroDetail" style="font-size:17px"></div>
+    <div id="heroException" class="warnline hidden"></div>
+    <div style="margin-top:14px">
+      <button class="action primary" id="icsBtn">Add to calendar (.ics)</button>
+    </div>
+    <div class="note" style="margin-top:10px">The calendar file repeats every cleaning day until
+    Dec 1. It has <b>no alarm set</b> — add one in your calendar app when you import it.
+    This page alone can&rsquo;t remind you: <b>import the file</b>, or the warning only exists
+    while this page is open. If the window changes, delete this calendar and export again.</div>
+  </div>
+
+  <div class="card" id="pickCard">
+    <div class="label" style="margin-bottom:10px">Where did you park? Tap your side.</div>
+    <button class="sidebtn" id="btnSE">My side — 1558, even numbers<small>South-east side, toward downtown &middot; Gauche</small></button>
+    <button class="sidebtn" id="btnNW">Across the street — odd numbers<small>North-west side, toward Mount Royal &middot; Droite</small></button>
+    <div class="note">GPS can&rsquo;t tell the sides apart on this street (the two parking rows are
+    only ~7&nbsp;m apart) — that&rsquo;s why you tap. Your choice is saved on this device only.</div>
+  </div>
+
+  <h2 style="font-size:20px;margin:18px 0 10px 0">Both sides</h2>
+  <div id="sideCards"></div>
+
+  <div class="card foot">
+    <div>Data: City of Montr&eacute;al open data, <a id="srcLink" href="https://donnees.montreal.ca/dataset/stationnement-sur-rue-signalisation-courant">Stationnement sur rue — signalisation courante</a> (CC-BY 4.0), as of <span class="asOf2">—</span>.
+    Joined to street segment ID_TRC 1260585 (Rue McGregor to Chemin de la C&ocirc;te-des-Neiges) from
+    signs 3–10&nbsp;m off the road centreline; a window counts as established only when two or more
+    poles carry the identical sign. Season Apr 1 – Dec 1 <b>inclusive</b>. Arrow codes on the signs
+    (FLECHE_PAN) are not decoded in the open data, so no arrow is assumed to mean both directions.
+    Centreline: OpenStreetMap contributors (ODbL). Times are America/Toronto.</div>
+    <div style="margin-top:8px">Cleaning only. Winter snow removal is separate — infoneige.ca already covers it.</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* Embedded generated data (see ticket-saver-data.json — same content). */
+var DATA = {"app": "Ticket Saver v1 (cleaning only)", "generated_date": "2026-11-16", "data_as_of": "2026-11-16", "provisional": true, "provisional_note": "PROVISIONAL — parsed from City of Montreal open data. No photo walk has matched the physical signs on this block to the joined set yet, and the city itself warns the signage data may differ from ground reality. Verify against the sign on your street.", "season_reading": "Season dates are INCLUSIVE both ends: a window applies on Apr 1 and on Dec 1 themselves when that date falls on a cleaning weekday. The countdown and the .ics export use this same reading.", "source": {"dataset": "Stationnement sur rue — signalisation courante", "dataset_url": "https://donnees.montreal.ca/dataset/stationnement-sur-rue-signalisation-courant", "package_id": "8ac6dd33-b0d3-4eab-a334-5a6283eb7940", "resource_id": "7f1d4ae9-1a12-46d7-953e-6b9c18c78680", "licence": "CC-BY 4.0 (City of Montreal open data)", "geobase_double_package_id": "88493b16-220f-4709-b57b-1ea57c5ba405", "rpa_codification_resource_id": "1baac760-4311-4b4f-8996-db93d348cc24"}, "street": {"name": "Avenue des Pins Ouest", "city": "Montreal", "home": {"address": "1558 avenue des Pins Ouest, Montreal", "lat": 45.49758, "lon": -73.58655}, "one_way": "NE to SW", "segment_id_trc": "1260585", "segment_extent_along_track_m": {"ne_end": -156, "sw_end": 142, "ne_bound": "Rue McGregor intersection (OSM)", "sw_bound": "Chemin de la Cote-des-Neiges, first carriageway (OSM)", "anchor": "1624 address point sits ~+120 m, just inside the SW end; geobase line geometry unavailable (file downloads 403), so the extent is an estimate"}, "geobase_double": [{"COTE_RUE_ID": "12605851", "ID_TRC": "1260585", "ID_VOIE": "300347", "NOM_VOIE": "Pins", "DEBUT_ADRESSE": "1501", "FIN_ADRESSE": "1623", "COTE": "Droite", "SENS_CIR": "1"}, {"COTE_RUE_ID": "12605852", "ID_TRC": "1260585", "ID_VOIE": "300347", "NOM_VOIE": "Pins", "DEBUT_ADRESSE": "1490", "FIN_ADRESSE": "1624", "COTE": "Gauche", "SENS_CIR": "1"}], "centreline_source": "OpenStreetMap via Overpass API, 2026-11-16 (see ticket-saver-gps/centerline.json)", "centreline_note": "Some ways carry placement=middle_of:1 — the mapped line may sit ~1 m off the true road centre. The 3-10 m band leaves margin for this; no calibration offset was applied (no ground truth yet)."}, "method": {"band_m": [3, 10], "intersection_exclusion_m": 20, "consensus_poles": 2, "fleche_pan": "UNKNOWN — no codebook found (web search, dataset resources, empirical pairing analysis: codes 2/3 co-occur on the same poles in a pattern consistent with opposite directions, but which is which is unproven). Recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "notes": ["A sign is attributed to des Pins Ouest only if: 3-10 m from the OSM centreline, nearest point inside segment ID_TRC 1260585 (McGregor to Cote-des-Neiges), and >=20 m along-track from either segment end. No nearest-sign fallback, ever.", "A side's window is established only when >=2 poles carry the identical parsed window (same weekdays, hours, season) AND the CODE_RPA canonical text parses to that same window.", "Parser is a whitelist grammar: \\P prefix, one Hh/HhMM hour range, 1-7 full French weekday names, explicit D MONTH AU D MONTH season. Anything else is ambiguous.", "EXCEPTE S3R is a flag (conservative default: restriction applies). Any other EXCEPTE/SAUF makes the sign ambiguous.", "EN TOUT TEMPS is a permanent ban, never a window. \\P = parking, \\A = stopping.", "Two different windows on one side = conflict: no countdown until resolved."]}, "sides": {"SE": {"status": "established", "label": "My side — 1558, even numbers (toward downtown)", "windows": [{"weekdays_iso": [1, 4], "weekdays_fr": ["LUNDI", "JEUDI"], "start": "17:30", "end": "18:30", "season": {"start_month": 4, "start_day": 1, "end_month": 12, "end_day": 1, "verbatim": "1 AVRIL AU 1 DEC"}, "exception": null, "confidence": "high", "verbatim": "\\P 17h30-18h30 LUNDI JEUDI 1 AVRIL AU 1 DEC", "signs": [{"lat": 45.496915, "lon": -73.587343, "poteau_id": "163078", "fleche_pan": "2", "distance_to_centreline_m": 6.3, "along_track_from_home_block_m": 94.0}, {"lat": 45.497311, "lon": -73.587033, "poteau_id": "75043", "fleche_pan": "0", "distance_to_centreline_m": 5.9, "along_track_from_home_block_m": 44.2}, {"lat": 45.498004, "lon": -73.586505, "poteau_id": "234006", "fleche_pan": "0", "distance_to_centreline_m": 5.3, "along_track_from_home_block_m": -42.8}, {"lat": 45.498306, "lon": -73.586266, "poteau_id": "75038", "fleche_pan": "2", "distance_to_centreline_m": 5.7, "along_track_from_home_block_m": -81.0}]}], "permanent_ban_note": "3 no-stopping panel(s) (\\A EN TOUT TEMPS) also stand on this side — a stopping ban, not a cleaning window.", "permanent_ban_signs": [{"verbatim": "\\A EN TOUT TEMPS", "lat": 45.498004, "lon": -73.586505}, {"verbatim": "\\A EN TOUT TEMPS", "lat": 45.498153, "lon": -73.586388}, {"verbatim": "\\A EN TOUT TEMPS", "lat": 45.498306, "lon": -73.586266}]}, "NW": {"status": "not_established", "label": "Across the street — odd numbers (toward Mount Royal)", "windows": [], "reason": "No cleaning sign for this side passed the segment + band + intersection checks in the city's signage data. Cleaning signs attributed to this side in the segment: 0 (need 2 poles with the identical window to establish one). Check the physical signs on the street — the data may be incomplete.", "permanent_ban_note": "5 no-parking-at-all-times panel(s) (\\P EN TOUT TEMPS) stand on this side in the data — but each panel's reach is set by its arrow (FLECHE_PAN, undecodable), so the data cannot say whether they cover the whole side or only short stretches. Check the physical signs. 3 no-stopping panel(s) (\\A EN TOUT TEMPS) also stand on this side — a stopping ban, not a cleaning window.", "permanent_ban_signs": [{"verbatim": "\\P EN TOUT TEMPS", "lat": 45.49705, "lon": -73.587441}, {"verbatim": "\\P EN TOUT TEMPS", "lat": 45.49712, "lon": -73.587386}, {"verbatim": "\\P EN TOUT TEMPS", "lat": 45.497194, "lon": -73.587332}, {"verbatim": "\\A EN TOUT TEMPS", "lat": 45.498054, "lon": -73.586656}, {"verbatim": "\\A EN TOUT TEMPS", "lat": 45.498193, "lon": -73.586511}, {"verbatim": "\\P EN TOUT TEMPS", "lat": 45.498319, "lon": -73.586455}, {"verbatim": "\\A EN TOUT TEMPS", "lat": 45.498319, "lon": -73.586455}, {"verbatim": "\\P EN TOUT TEMPS", "lat": 45.498418, "lon": -73.586377}]}}, "attributed_signs": [{"poteau_id": "163078", "position": "6", "panneau_id": "1428397", "code_rpa": "PV-PB", "fleche_pan": "2", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.496915, "lon": -73.587343, "distance_to_centreline_m": 6.3, "cross_track_m": 6.3, "side": "SE", "segment": 30, "along_track_from_home_block_m": 94.0, "poteau_version": "6", "date_conception": "2019-08-16", "date_execution": "2019-08-22", "parsed": {"verbatim": "P 02h 09h-18h LUN. AU VEN.", "normalized": "P 02H 09H-18H LUN. AU VEN.", "kind": "other", "window": null, "exception": null, "confidence": null, "code_rpa": "PV-PB", "code_agrees": null, "notes": ["Not a cleaning sign (time limit / school / loading / other family)."]}}, {"poteau_id": "163078", "position": "7", "panneau_id": "1428396", "code_rpa": "SB-JU-A", "fleche_pan": "2", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.496915, "lon": -73.587343, "distance_to_centreline_m": 6.3, "cross_track_m": 6.3, "side": "SE", "segment": 30, "along_track_from_home_block_m": 94.0, "poteau_version": "6", "date_conception": "2019-08-16", "date_execution": "2019-08-22", "parsed": {"verbatim": "\\P 17h30-18h30 LUNDI JEUDI 1 AVRIL AU 1 DEC", "normalized": "\\P 17H30-18H30 LUNDI JEUDI 1 AVRIL AU 1 DEC", "kind": "cleaning", "window": {"weekdays_iso": [1, 4], "weekdays_fr": ["LUNDI", "JEUDI"], "start": "17:30", "end": "18:30", "season": {"start_month": 4, "start_day": 1, "end_month": 12, "end_day": 1, "verbatim": "1 AVRIL AU 1 DEC"}}, "exception": null, "confidence": "high", "code_rpa": "SB-JU-A", "code_agrees": true, "notes": []}}, {"poteau_id": "75008", "position": "6", "panneau_id": "1842008", "code_rpa": "SD-TT", "fleche_pan": "2", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.49705, "lon": -73.587441, "distance_to_centreline_m": 7.8, "cross_track_m": -7.8, "side": "NW", "segment": 30, "along_track_from_home_block_m": 85.0, "poteau_version": "8", "date_conception": "2023-10-04", "date_execution": "2023-10-18", "parsed": {"verbatim": "\\P EN TOUT TEMPS", "normalized": "\\P EN TOUT TEMPS", "kind": "permanent_ban", "window": null, "exception": null, "confidence": null, "code_rpa": "SD-TT", "code_agrees": null, "notes": ["No-parking at all times (\\P family). Scope is set by the sign's arrow (FLECHE_PAN, undecodable) — a whole-side ban is not asserted from this panel alone."]}}, {"poteau_id": "75008", "position": "5", "panneau_id": "1842009", "code_rpa": "PV-DB", "fleche_pan": "3", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.49705, "lon": -73.587441, "distance_to_centreline_m": 7.8, "cross_track_m": -7.8, "side": "NW", "segment": 30, "along_track_from_home_block_m": 85.0, "poteau_version": "8", "date_conception": "2023-10-04", "date_execution": "2023-10-18", "parsed": {"verbatim": "P 15 min 07h-18h LUN. AU VEN.", "normalized": "P 15 MIN 07H-18H LUN. AU VEN.", "kind": "other", "window": null, "exception": null, "confidence": null, "code_rpa": "PV-DB", "code_agrees": null, "notes": ["Not a cleaning sign (time limit / school / loading / other family)."]}}, {"poteau_id": "124873", "position": "7", "panneau_id": "1842011", "code_rpa": "SD-TT", "fleche_pan": "3", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.49712, "lon": -73.587386, "distance_to_centreline_m": 8.0, "cross_track_m": -8.0, "side": "NW", "segment": 30, "along_track_from_home_block_m": 76.1, "poteau_version": "4", "date_conception": "2023-10-04", "date_execution": "2023-10-18", "parsed": {"verbatim": "\\P EN TOUT TEMPS", "normalized": "\\P EN TOUT TEMPS", "kind": "permanent_ban", "window": null, "exception": null, "confidence": null, "code_rpa": "SD-TT", "code_agrees": null, "notes": ["No-parking at all times (\\P family). Scope is set by the sign's arrow (FLECHE_PAN, undecodable) — a whole-side ban is not asserted from this panel alone."]}}, {"poteau_id": "124873", "position": "6", "panneau_id": "1842012", "code_rpa": "PV-DB", "fleche_pan": "2", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.49712, "lon": -73.587386, "distance_to_centreline_m": 8.0, "cross_track_m": -8.0, "side": "NW", "segment": 30, "along_track_from_home_block_m": 76.1, "poteau_version": "4", "date_conception": "2023-10-04", "date_execution": "2023-10-18", "parsed": {"verbatim": "P 15 min 07h-18h LUN. AU VEN.", "normalized": "P 15 MIN 07H-18H LUN. AU VEN.", "kind": "other", "window": null, "exception": null, "confidence": null, "code_rpa": "PV-DB", "code_agrees": null, "notes": ["Not a cleaning sign (time limit / school / loading / other family)."]}}, {"poteau_id": "75010", "position": "6", "panneau_id": "1842005", "code_rpa": "PV-DB", "fleche_pan": "3", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.497194, "lon": -73.587332, "distance_to_centreline_m": 8.3, "cross_track_m": -8.3, "side": "NW", "segment": 28, "along_track_from_home_block_m": 66.7, "poteau_version": "4", "date_conception": "2023-10-04", "date_execution": "2023-10-18", "parsed": {"verbatim": "P 15 min 07h-18h LUN. AU VEN.", "normalized": "P 15 MIN 07H-18H LUN. AU VEN.", "kind": "other", "window": null, "exception": null, "confidence": null, "code_rpa": "PV-DB", "code_agrees": null, "notes": ["Not a cleaning sign (time limit / school / loading / other family)."]}}, {"poteau_id": "75010", "position": "7", "panneau_id": "1842004", "code_rpa": "SD-TT", "fleche_pan": "2", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.497194, "lon": -73.587332, "distance_to_centreline_m": 8.3, "cross_track_m": -8.3, "side": "NW", "segment": 28, "along_track_from_home_block_m": 66.7, "poteau_version": "4", "date_conception": "2023-10-04", "date_execution": "2023-10-18", "parsed": {"verbatim": "\\P EN TOUT TEMPS", "normalized": "\\P EN TOUT TEMPS", "kind": "permanent_ban", "window": null, "exception": null, "confidence": null, "code_rpa": "SD-TT", "code_agrees": null, "notes": ["No-parking at all times (\\P family). Scope is set by the sign's arrow (FLECHE_PAN, undecodable) — a whole-side ban is not asserted from this panel alone."]}}, {"poteau_id": "75043", "position": "6", "panneau_id": "1428389", "code_rpa": "PV-PB", "fleche_pan": "0", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.497311, "lon": -73.587033, "distance_to_centreline_m": 5.9, "cross_track_m": 5.9, "side": "SE", "segment": 28, "along_track_from_home_block_m": 44.2, "poteau_version": "8", "date_conception": "2019-08-16", "date_execution": "2019-08-22", "parsed": {"verbatim": "P 02h 09h-18h LUN. AU VEN.", "normalized": "P 02H 09H-18H LUN. AU VEN.", "kind": "other", "window": null, "exception": null, "confidence": null, "code_rpa": "PV-PB", "code_agrees": null, "notes": ["Not a cleaning sign (time limit / school / loading / other family)."]}}, {"poteau_id": "75043", "position": "7", "panneau_id": "1428388", "code_rpa": "SB-JU-A", "fleche_pan": "0", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.497311, "lon": -73.587033, "distance_to_centreline_m": 5.9, "cross_track_m": 5.9, "side": "SE", "segment": 28, "along_track_from_home_block_m": 44.2, "poteau_version": "8", "date_conception": "2019-08-16", "date_execution": "2019-08-22", "parsed": {"verbatim": "\\P 17h30-18h30 LUNDI JEUDI 1 AVRIL AU 1 DEC", "normalized": "\\P 17H30-18H30 LUNDI JEUDI 1 AVRIL AU 1 DEC", "kind": "cleaning", "window": {"weekdays_iso": [1, 4], "weekdays_fr": ["LUNDI", "JEUDI"], "start": "17:30", "end": "18:30", "season": {"start_month": 4, "start_day": 1, "end_month": 12, "end_day": 1, "verbatim": "1 AVRIL AU 1 DEC"}}, "exception": null, "confidence": "high", "code_rpa": "SB-JU-A", "code_agrees": true, "notes": []}}, {"poteau_id": "75013", "position": "7", "panneau_id": "1842002", "code_rpa": "PV-DB", "fleche_pan": "0", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.497333, "lon": -73.587223, "distance_to_centreline_m": 8.3, "cross_track_m": -8.3, "side": "NW", "segment": 28, "along_track_from_home_block_m": 49.2, "poteau_version": "7", "date_conception": "2023-10-04", "date_execution": "2023-10-18", "parsed": {"verbatim": "P 15 min 07h-18h LUN. AU VEN.", "normalized": "P 15 MIN 07H-18H LUN. AU VEN.", "kind": "other", "window": null, "exception": null, "confidence": null, "code_rpa": "PV-DB", "code_agrees": null, "notes": ["Not a cleaning sign (time limit / school / loading / other family)."]}}, {"poteau_id": "265983", "position": "7", "panneau_id": "1559032", "code_rpa": "PV-DB", "fleche_pan": "2", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.497438, "lon": -73.587124, "distance_to_centreline_m": 7.1, "cross_track_m": -7.1, "side": "NW", "segment": 27, "along_track_from_home_block_m": 35.3, "poteau_version": "1", "date_conception": "2020-10-22", "date_execution": "2023-06-20", "parsed": {"verbatim": "P 15 min 07h-18h LUN. AU VEN.", "normalized": "P 15 MIN 07H-18H LUN. AU VEN.", "kind": "other", "window": null, "exception": null, "confidence": null, "code_rpa": "PV-DB", "code_agrees": null, "notes": ["Not a cleaning sign (time limit / school / loading / other family)."]}}, {"poteau_id": "163045", "position": "7", "panneau_id": "1841999", "code_rpa": "PV-DB", "fleche_pan": "2", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.497455, "lon": -73.587123, "distance_to_centreline_m": 7.9, "cross_track_m": -7.9, "side": "NW", "segment": 27, "along_track_from_home_block_m": 33.6, "poteau_version": "5", "date_conception": "2023-10-04", "date_execution": "2023-10-18", "parsed": {"verbatim": "P 15 min 07h-18h LUN. AU VEN.", "normalized": "P 15 MIN 07H-18H LUN. AU VEN.", "kind": "other", "window": null, "exception": null, "confidence": null, "code_rpa": "PV-DB", "code_agrees": null, "notes": ["Not a cleaning sign (time limit / school / loading / other family)."]}}, {"poteau_id": "75019", "position": "6", "panneau_id": "1849304", "code_rpa": "PV-DB", "fleche_pan": "3", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.497716, "lon": -73.586902, "distance_to_centreline_m": 6.6, "cross_track_m": -6.6, "side": "NW", "segment": 26, "along_track_from_home_block_m": -0.0, "poteau_version": "11", "date_conception": "2023-10-24", "date_execution": "2023-11-15", "parsed": {"verbatim": "P 15 min 07h-18h LUN. AU VEN.", "normalized": "P 15 MIN 07H-18H LUN. AU VEN.", "kind": "other", "window": null, "exception": null, "confidence": null, "code_rpa": "PV-DB", "code_agrees": null, "notes": ["Not a cleaning sign (time limit / school / loading / other family)."]}}, {"poteau_id": "75042", "position": "6", "panneau_id": "1849299", "code_rpa": "PV-PB", "fleche_pan": "0", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.497716, "lon": -73.586723, "distance_to_centreline_m": 5.6, "cross_track_m": 5.6, "side": "SE", "segment": 26, "along_track_from_home_block_m": -6.7, "poteau_version": "6", "date_conception": "2023-10-24", "date_execution": "2023-11-15", "parsed": {"verbatim": "P 02h 09h-18h LUN. AU VEN.", "normalized": "P 02H 09H-18H LUN. AU VEN.", "kind": "other", "window": null, "exception": null, "confidence": null, "code_rpa": "PV-PB", "code_agrees": null, "notes": ["Not a cleaning sign (time limit / school / loading / other family)."]}}, {"poteau_id": "75020", "position": "7", "panneau_id": "1994991", "code_rpa": "PV-DB", "fleche_pan": "0", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.497973, "lon": -73.58671, "distance_to_centreline_m": 7.1, "cross_track_m": -7.1, "side": "NW", "segment": 25, "along_track_from_home_block_m": -32.1, "poteau_version": "5", "date_conception": "2025-05-28", "date_execution": "2025-06-26", "parsed": {"verbatim": "P 15 min 07h-18h LUN. AU VEN.", "normalized": "P 15 MIN 07H-18H LUN. AU VEN.", "kind": "other", "window": null, "exception": null, "confidence": null, "code_rpa": "PV-DB", "code_agrees": null, "notes": ["Not a cleaning sign (time limit / school / loading / other family)."]}}, {"poteau_id": "234006", "position": "3", "panneau_id": "2055196", "code_rpa": "PV-PB", "fleche_pan": "3", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.498004, "lon": -73.586505, "distance_to_centreline_m": 5.3, "cross_track_m": 5.3, "side": "SE", "segment": 24, "along_track_from_home_block_m": -42.8, "poteau_version": "7", "date_conception": "2026-02-02", "date_execution": "2026-03-03", "parsed": {"verbatim": "P 02h 09h-18h LUN. AU VEN.", "normalized": "P 02H 09H-18H LUN. AU VEN.", "kind": "other", "window": null, "exception": null, "confidence": null, "code_rpa": "PV-PB", "code_agrees": null, "notes": ["Not a cleaning sign (time limit / school / loading / other family)."]}}, {"poteau_id": "234006", "position": "4", "panneau_id": "2055195", "code_rpa": "AD-TT", "fleche_pan": "2", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.498004, "lon": -73.586505, "distance_to_centreline_m": 5.3, "cross_track_m": 5.3, "side": "SE", "segment": 24, "along_track_from_home_block_m": -42.8, "poteau_version": "7", "date_conception": "2026-02-02", "date_execution": "2026-03-03", "parsed": {"verbatim": "\\A EN TOUT TEMPS", "normalized": "\\A EN TOUT TEMPS", "kind": "permanent_ban", "window": null, "exception": null, "confidence": null, "code_rpa": "AD-TT", "code_agrees": null, "notes": ["No-stopping at all times (\\A family) — a stopping ban, not a parking-cleaning window. Scope set by the arrow."]}}, {"poteau_id": "234006", "position": "5", "panneau_id": "2055194", "code_rpa": "SB-JU-A", "fleche_pan": "0", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.498004, "lon": -73.586505, "distance_to_centreline_m": 5.3, "cross_track_m": 5.3, "side": "SE", "segment": 24, "along_track_from_home_block_m": -42.8, "poteau_version": "7", "date_conception": "2026-02-02", "date_execution": "2026-03-03", "parsed": {"verbatim": "\\P 17h30-18h30 LUNDI JEUDI 1 AVRIL AU 1 DEC", "normalized": "\\P 17H30-18H30 LUNDI JEUDI 1 AVRIL AU 1 DEC", "kind": "cleaning", "window": {"weekdays_iso": [1, 4], "weekdays_fr": ["LUNDI", "JEUDI"], "start": "17:30", "end": "18:30", "season": {"start_month": 4, "start_day": 1, "end_month": 12, "end_day": 1, "verbatim": "1 AVRIL AU 1 DEC"}}, "exception": null, "confidence": "high", "code_rpa": "SB-JU-A", "code_agrees": true, "notes": []}}, {"poteau_id": "234008", "position": "4", "panneau_id": "2013725", "code_rpa": "PV-DB", "fleche_pan": "2", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.498054, "lon": -73.586656, "distance_to_centreline_m": 7.7, "cross_track_m": -7.7, "side": "NW", "segment": 24, "along_track_from_home_block_m": -42.0, "poteau_version": "6", "date_conception": "2025-07-25", "date_execution": "2025-08-21", "parsed": {"verbatim": "P 15 min 07h-18h LUN. AU VEN.", "normalized": "P 15 MIN 07H-18H LUN. AU VEN.", "kind": "other", "window": null, "exception": null, "confidence": null, "code_rpa": "PV-DB", "code_agrees": null, "notes": ["Not a cleaning sign (time limit / school / loading / other family)."]}}, {"poteau_id": "234008", "position": "5", "panneau_id": "2013724", "code_rpa": "AD-TT", "fleche_pan": "3", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.498054, "lon": -73.586656, "distance_to_centreline_m": 7.7, "cross_track_m": -7.7, "side": "NW", "segment": 24, "along_track_from_home_block_m": -42.0, "poteau_version": "6", "date_conception": "2025-07-25", "date_execution": "2025-08-21", "parsed": {"verbatim": "\\A EN TOUT TEMPS", "normalized": "\\A EN TOUT TEMPS", "kind": "permanent_ban", "window": null, "exception": null, "confidence": null, "code_rpa": "AD-TT", "code_agrees": null, "notes": ["No-stopping at all times (\\A family) — a stopping ban, not a parking-cleaning window. Scope set by the arrow."]}}, {"poteau_id": "75039", "position": "5", "panneau_id": "1805389", "code_rpa": "AD-TT", "fleche_pan": "0", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.498153, "lon": -73.586388, "distance_to_centreline_m": 5.3, "cross_track_m": 5.3, "side": "SE", "segment": 22, "along_track_from_home_block_m": -61.6, "poteau_version": "12", "date_conception": "2023-06-08", "date_execution": "2023-08-16", "parsed": {"verbatim": "\\A EN TOUT TEMPS", "normalized": "\\A EN TOUT TEMPS", "kind": "permanent_ban", "window": null, "exception": null, "confidence": null, "code_rpa": "AD-TT", "code_agrees": null, "notes": ["No-stopping at all times (\\A family) — a stopping ban, not a parking-cleaning window. Scope set by the arrow."]}}, {"poteau_id": "234007", "position": "6", "panneau_id": "1775856", "code_rpa": "AD-TT", "fleche_pan": "0", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.498193, "lon": -73.586511, "distance_to_centreline_m": 5.2, "cross_track_m": -5.2, "side": "NW", "segment": 22, "along_track_from_home_block_m": -60.9, "poteau_version": "5", "date_conception": "2023-02-01", "date_execution": "2023-02-28", "parsed": {"verbatim": "\\A EN TOUT TEMPS", "normalized": "\\A EN TOUT TEMPS", "kind": "permanent_ban", "window": null, "exception": null, "confidence": null, "code_rpa": "AD-TT", "code_agrees": null, "notes": ["No-stopping at all times (\\A family) — a stopping ban, not a parking-cleaning window. Scope set by the arrow."]}}, {"poteau_id": "75038", "position": "7", "panneau_id": "1001463", "code_rpa": "AD-TT", "fleche_pan": "3", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.498306, "lon": -73.586266, "distance_to_centreline_m": 5.7, "cross_track_m": 5.7, "side": "SE", "segment": 20, "along_track_from_home_block_m": -81.0, "poteau_version": "7", "date_conception": "2014-01-09", "date_execution": "2014-01-09", "parsed": {"verbatim": "\\A EN TOUT TEMPS", "normalized": "\\A EN TOUT TEMPS", "kind": "permanent_ban", "window": null, "exception": null, "confidence": null, "code_rpa": "AD-TT", "code_agrees": null, "notes": ["No-stopping at all times (\\A family) — a stopping ban, not a parking-cleaning window. Scope set by the arrow."]}}, {"poteau_id": "75038", "position": "5", "panneau_id": "1001465", "code_rpa": "PV-PB", "fleche_pan": "2", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.498306, "lon": -73.586266, "distance_to_centreline_m": 5.7, "cross_track_m": 5.7, "side": "SE", "segment": 20, "along_track_from_home_block_m": -81.0, "poteau_version": "7", "date_conception": "2014-01-09", "date_execution": "2014-01-09", "parsed": {"verbatim": "P 02h 09h-18h LUN. AU VEN.", "normalized": "P 02H 09H-18H LUN. AU VEN.", "kind": "other", "window": null, "exception": null, "confidence": null, "code_rpa": "PV-PB", "code_agrees": null, "notes": ["Not a cleaning sign (time limit / school / loading / other family)."]}}, {"poteau_id": "75038", "position": "6", "panneau_id": "1001464", "code_rpa": "SB-JU-A", "fleche_pan": "2", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.498306, "lon": -73.586266, "distance_to_centreline_m": 5.7, "cross_track_m": 5.7, "side": "SE", "segment": 20, "along_track_from_home_block_m": -81.0, "poteau_version": "7", "date_conception": "2014-01-09", "date_execution": "2014-01-09", "parsed": {"verbatim": "\\P 17h30-18h30 LUNDI JEUDI 1 AVRIL AU 1 DEC", "normalized": "\\P 17H30-18H30 LUNDI JEUDI 1 AVRIL AU 1 DEC", "kind": "cleaning", "window": {"weekdays_iso": [1, 4], "weekdays_fr": ["LUNDI", "JEUDI"], "start": "17:30", "end": "18:30", "season": {"start_month": 4, "start_day": 1, "end_month": 12, "end_day": 1, "verbatim": "1 AVRIL AU 1 DEC"}}, "exception": null, "confidence": "high", "code_rpa": "SB-JU-A", "code_agrees": true, "notes": []}}, {"poteau_id": "237657", "position": "6", "panneau_id": "1842315", "code_rpa": "SD-TT", "fleche_pan": "3", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.498319, "lon": -73.586455, "distance_to_centreline_m": 8.0, "cross_track_m": -8.0, "side": "NW", "segment": 20, "along_track_from_home_block_m": -75.3, "poteau_version": "3", "date_conception": "2023-10-05", "date_execution": "2023-11-03", "parsed": {"verbatim": "\\P EN TOUT TEMPS", "normalized": "\\P EN TOUT TEMPS", "kind": "permanent_ban", "window": null, "exception": null, "confidence": null, "code_rpa": "SD-TT", "code_agrees": null, "notes": ["No-parking at all times (\\P family). Scope is set by the sign's arrow (FLECHE_PAN, undecodable) — a whole-side ban is not asserted from this panel alone."]}}, {"poteau_id": "237657", "position": "7", "panneau_id": "1842314", "code_rpa": "AD-TT", "fleche_pan": "2", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.498319, "lon": -73.586455, "distance_to_centreline_m": 8.0, "cross_track_m": -8.0, "side": "NW", "segment": 20, "along_track_from_home_block_m": -75.3, "poteau_version": "3", "date_conception": "2023-10-05", "date_execution": "2023-11-03", "parsed": {"verbatim": "\\A EN TOUT TEMPS", "normalized": "\\A EN TOUT TEMPS", "kind": "permanent_ban", "window": null, "exception": null, "confidence": null, "code_rpa": "AD-TT", "code_agrees": null, "notes": ["No-stopping at all times (\\A family) — a stopping ban, not a parking-cleaning window. Scope set by the arrow."]}}, {"poteau_id": "157098", "position": "5", "panneau_id": "1841987", "code_rpa": "PE-JB", "fleche_pan": "3", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.498418, "lon": -73.586377, "distance_to_centreline_m": 7.8, "cross_track_m": -7.8, "side": "NW", "segment": 20, "along_track_from_home_block_m": -87.8, "poteau_version": "6", "date_conception": "2023-10-04", "date_execution": "2023-10-18", "parsed": {"verbatim": "P 15 MIN. 07h30-17h JOURS D`ECOLE", "normalized": "P 15 MIN. 07H30-17H JOURS D'ECOLE", "kind": "other", "window": null, "exception": null, "confidence": null, "code_rpa": "PE-JB", "code_agrees": null, "notes": ["Not a cleaning sign (time limit / school / loading / other family)."]}}, {"poteau_id": "157098", "position": "7", "panneau_id": "1841985", "code_rpa": "SD-TT", "fleche_pan": "2", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.498418, "lon": -73.586377, "distance_to_centreline_m": 7.8, "cross_track_m": -7.8, "side": "NW", "segment": 20, "along_track_from_home_block_m": -87.8, "poteau_version": "6", "date_conception": "2023-10-04", "date_execution": "2023-10-18", "parsed": {"verbatim": "\\P EN TOUT TEMPS", "normalized": "\\P EN TOUT TEMPS", "kind": "permanent_ban", "window": null, "exception": null, "confidence": null, "code_rpa": "SD-TT", "code_agrees": null, "notes": ["No-parking at all times (\\P family). Scope is set by the sign's arrow (FLECHE_PAN, undecodable) — a whole-side ban is not asserted from this panel alone."]}}, {"poteau_id": "75034", "position": "2", "panneau_id": "1925248", "code_rpa": "PV-PB", "fleche_pan": "3", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.498589, "lon": -73.586046, "distance_to_centreline_m": 5.9, "cross_track_m": 5.9, "side": "SE", "segment": 20, "along_track_from_home_block_m": -116.7, "poteau_version": "11", "date_conception": "2024-08-26", "date_execution": "2025-03-10", "parsed": {"verbatim": "P 02h 09h-18h LUN. AU VEN.", "normalized": "P 02H 09H-18H LUN. AU VEN.", "kind": "other", "window": null, "exception": null, "confidence": null, "code_rpa": "PV-PB", "code_agrees": null, "notes": ["Not a cleaning sign (time limit / school / loading / other family)."]}}, {"poteau_id": "75034", "position": "4", "panneau_id": "1925246", "code_rpa": "PE-JB", "fleche_pan": "2", "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.", "lat": 45.498589, "lon": -73.586046, "distance_to_centreline_m": 5.9, "cross_track_m": 5.9, "side": "SE", "segment": 20, "along_track_from_home_block_m": -116.7, "poteau_version": "11", "date_conception": "2024-08-26", "date_execution": "2025-03-10", "parsed": {"verbatim": "P 15 MIN. 07h30-17h JOURS D`ECOLE", "normalized": "P 15 MIN. 07H30-17H JOURS D'ECOLE", "kind": "other", "window": null, "exception": null, "confidence": null, "code_rpa": "PE-JB", "code_agrees": null, "notes": ["Not a cleaning sign (time limit / school / loading / other family)."]}}], "counts": {"fetched_in_box": 1281, "in_band_3_10m": 65, "in_segment": 32, "attributed": 32, "cleaning_in_segment": 4, "duplicate_panneau_rows_skipped": 145, "intersection_suspect_excluded": 6}};
+/* OSM centreline of Avenue des Pins Ouest, NE -> SW (see ticket-saver-gps/centerline.json).
+   Cross-track sign: + = SE side (1558 side), - = NW side. */
+var CENTERLINE = [[45.5006584, -73.5851514], [45.5005701, -73.5852105], [45.5003879, -73.5853258], [45.5003563, -73.5853464], [45.5002708, -73.5853745], [45.5002418, -73.5853855], [45.5001439, -73.5854246], [45.4997678, -73.5855569], [45.4995303, -73.5856403], [45.4994151, -73.5856816], [45.4993727, -73.585696], [45.4993246, -73.5857123], [45.4991263, -73.5857886], [45.499066, -73.5858122], [45.4990177, -73.5858323], [45.4989699, -73.5858562], [45.4989294, -73.5858803], [45.4988842, -73.5859079], [45.4988411, -73.5859403], [45.4987494, -73.58601], [45.4986233, -73.5861056], [45.4982212, -73.5864134], [45.4981849, -73.5864412], [45.4981556, -73.5864639], [45.4980682, -73.5865329], [45.4979543, -73.5866203], [45.4977742, -73.5867603], [45.497631, -73.5868712], [45.4973746, -73.58707], [45.4971428, -73.5872498], [45.4971033, -73.5872819], [45.4967717, -73.5875545], [45.4967062, -73.5876098], [45.4966858, -73.5876258], [45.4966634, -73.5876429], [45.4966228, -73.5876732], [45.4965684, -73.5877175], [45.4965043, -73.5877682], [45.4964025, -73.5878463], [45.4962814, -73.5878955]];
+var HOME_LAT = 45.49758, HOME_LON = -73.58655;
+var TZ = "America/Toronto";
+var LS_KEY = "ticketSaver.side.v1";
+var DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+var DAY_SHORT = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+var MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+/* ---- America/Toronto wall-clock helpers (never fixed-ms UTC arithmetic) ---- */
+function tzParts(d) {
+  var p = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "numeric",
+    day: "numeric", hour: "numeric", minute: "numeric", second: "numeric",
+    weekday: "short", hourCycle: "h23" }).formatToParts(d);
+  var o = {};
+  for (var i = 0; i < p.length; i++) o[p[i].type] = p[i].value;
+  return { y: +o.year, mo: +o.month, d: +o.day, h: +o.hour, mi: +o.minute, s: +o.second,
+           wd: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(o.weekday) };
+}
+function tzOffsetMs(d) {
+  var p = tzParts(d);
+  return Date.UTC(p.y, p.mo - 1, p.d, p.h, p.mi, p.s) - d.getTime();
+}
+function torontoToUtc(y, mo, d, h, mi) {
+  var guess = Date.UTC(y, mo - 1, d, h, mi);
+  var off = tzOffsetMs(new Date(guess));
+  var t = new Date(guess - off);
+  var off2 = tzOffsetMs(t);
+  if (off2 !== off) t = new Date(guess - off2);
+  return t;
+}
+function inSeason(win, y, mo, d) {
+  var v = mo * 100 + d;
+  var s = win.season.start_month * 100 + win.season.start_day;
+  var e = win.season.end_month * 100 + win.season.end_day;
+  return v >= s && v <= e;   /* season dates are INCLUSIVE both ends */
+}
+function weekdayIsoFromTorontoParts(p) { return p.wd === 0 ? 7 : p.wd; }  /* Sun=7, Mon=1..Sat=6 */
+
+/* ---- next-window math: states 'next' | 'now' | 'season_over' ---- */
+function nextWindow(win, now) {
+  var startMin = parseInt(win.start.slice(0, 2), 10) * 60 + parseInt(win.start.slice(3), 10);
+  var endMin = parseInt(win.end.slice(0, 2), 10) * 60 + parseInt(win.end.slice(3), 10);
+  var durMin = endMin - startMin;
+  if (durMin <= 0) durMin += 24 * 60;
+  var p0 = tzParts(now);
+  var todayInSeason = inSeason(win, p0.y, p0.mo, p0.d);
+  for (var off = 0; off <= 400; off++) {
+    var base = new Date(Date.UTC(p0.y, p0.mo - 1, p0.d) + off * 86400000);
+    var y = base.getUTCFullYear(), mo = base.getUTCMonth() + 1, d = base.getUTCDate();
+    if (!inSeason(win, y, mo, d)) continue;
+    var wd = base.getUTCDay();
+    var iso = wd === 0 ? 7 : wd;
+    if (win.weekdays_iso.indexOf(iso) < 0) continue;
+    var start = torontoToUtc(y, mo, d, Math.floor(startMin / 60), startMin % 60);
+    var end = new Date(start.getTime() + durMin * 60000);
+    if (now < start) {
+      /* 'season_over' when the next window falls in a later season than today's
+         (e.g. Mon Nov 30: the next Mon/Thu window is next April, not this week). */
+      var seasonEnd = torontoToUtc(p0.y, win.season.end_month, win.season.end_day, 23, 59);
+      var st = (todayInSeason && start.getTime() <= seasonEnd.getTime()) ? "next" : "season_over";
+      return { state: st, start: start, end: end };
+    }
+    if (now >= start && now < end) return { state: "now", start: start, end: end };
+  }
+  return null;
+}
+function fmtTimeToronto(d) {
+  return new Intl.DateTimeFormat("en-US", { timeZone: TZ, hour: "numeric", minute: "2-digit" }).format(d);
+}
+function fmtDateToronto(d) {
+  var p = tzParts(d);
+  return DAY_NAMES[p.wd] + ", " + MONTH_SHORT[p.mo - 1] + " " + p.d;
+}
+function fmtCountdown(ms) {
+  var mins = Math.max(0, Math.round(ms / 60000));
+  var days = Math.floor(mins / 1440), h = Math.floor((mins % 1440) / 60), m = mins % 60;
+  if (days > 0) return days + (days === 1 ? " day, " : " days, ") + h + " h, " + m + " min";
+  if (h > 0) return h + " h, " + m + " min";
+  return m + " min";
+}
+function seasonStartLabel(win) {
+  return MONTH_SHORT[win.season.start_month - 1] + " " + win.season.start_day;
+}
+function windowHeadline(win) {
+  var names = win.weekdays_iso.map(function (i) { return DAY_NAMES[i % 7]; });
+  var dayPart = names.length === 1 ? names[0] + "s"
+    : names.slice(0, -1).join("s, ") + "s & " + names[names.length - 1] + "s";
+  function parts(s) {
+    var h = +s.slice(0, 2), m = s.slice(3);
+    return { t: (h % 12 || 12) + ":" + m, ap: h >= 12 ? "PM" : "AM" };
+  }
+  var a = parts(win.start), b = parts(win.end);
+  var range = a.ap === b.ap ? a.t + "–" + b.t + " " + a.ap : a.t + " " + a.ap + "–" + b.t + " " + b.ap;
+  return dayPart + ", " + range + ", " + seasonStartLabel(win) + " – "
+    + MONTH_SHORT[win.season.end_month - 1] + " " + win.season.end_day;
+}
+
+/* ---- .ics export (RFC 5545: TZID DTSTART + UTC UNTIL + VTIMEZONE) ---- */
+function foldLine(s) {
+  var out = [];
+  while (s.length > 73) { out.push(s.slice(0, 73)); s = " " + s.slice(73); }
+  out.push(s);
+  return out.join("\r\n");
+}
+function icsEscape(s) {
+  return String(s).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+}
+function pad(n, w) { n = String(n); while (n.length < (w || 2)) n = "0" + n; return n; }
+function icsDateLocal(d) {
+  var p = tzParts(d);
+  return pad(p.y, 4) + pad(p.mo) + pad(p.d) + "T" + pad(p.h) + pad(p.mi) + "00";
+}
+function buildIcs(sideKey, win, now) {
+  var nw = nextWindow(win, now);
+  if (!nw) return null;
+  var start = nw.start, end = nw.end;
+  if (nw.state === "now") {           /* export the NEXT occurrence, not the one running now */
+    var after = nextWindow(win, new Date(end.getTime() + 60000));
+    if (!after) return null;
+    start = after.start; end = after.end;
+  }
+  var sp = tzParts(start);
+  var untilYear = sp.y;               /* DTSTART is always in-season, so UNTIL is the season end that year */
+  var untilDate = untilYear + pad(win.season.end_month) + pad(win.season.end_day) + "T235959Z";
+  var byday = win.weekdays_iso.map(function (i) {
+    return ["MO", "TU", "WE", "TH", "FR", "SA", "SU"][i - 1];
+  }).join(",");
+  var stamp = new Date(now).toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+  var uid = "ticket-saver-" + sideKey.toLowerCase() + "-" + icsDateLocal(start) + "@jsm-tools.com";
+  var lines = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//JSM Tools//Ticket Saver 1.0//EN",
+    "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:Ticket Saver — des Pins Ouest",
+    "BEGIN:VTIMEZONE", "TZID:America/Toronto",
+    "BEGIN:DAYLIGHT", "TZOFFSETFROM:-0500", "TZOFFSETTO:-0400", "TZNAME:EDT",
+    "DTSTART:19700308T020000", "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU", "END:DAYLIGHT",
+    "BEGIN:STANDARD", "TZOFFSETFROM:-0400", "TZOFFSETTO:-0500", "TZNAME:EST",
+    "DTSTART:19701101T020000", "RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU", "END:STANDARD",
+    "END:VTIMEZONE",
+    "BEGIN:VEVENT", "UID:" + uid, "DTSTAMP:" + stamp,
+    "DTSTART;TZID=America/Toronto:" + icsDateLocal(start),
+    "DTEND;TZID=America/Toronto:" + icsDateLocal(end),
+    "RRULE:FREQ=WEEKLY;BYDAY=" + byday + ";UNTIL=" + untilDate,
+    "SUMMARY:Ticket Saver — street cleaning, des Pins Ouest (" + sideKey + " side)",
+    "DESCRIPTION:" + icsEscape("No parking — street cleaning on the " + sideKey + " side of Avenue des Pins Ouest. "
+      + "Sign says: " + win.verbatim + " Provisional data from City of Montreal open data, as of "
+      + DATA.data_as_of + ". Verify against the physical sign. If the window changes, delete this calendar and re-export."),
+    "END:VEVENT", "END:VCALENDAR"
+  ];
+  return lines.map(foldLine).join("\r\n") + "\r\n";
+}
+
+/* ---- centreline snap (same math as the GPS test page) ---- */
+var REF_LAT = HOME_LAT, REF_LON = HOME_LON;
+var COSLAT = Math.cos(REF_LAT * Math.PI / 180);
+function toXY(lat, lon) { return [(lon - REF_LON) * 111320 * COSLAT, (lat - REF_LAT) * 110540]; }
+function snap(lat, lon) {
+  var p = toXY(lat, lon), best = null;
+  for (var i = 0; i < CENTERLINE.length - 1; i++) {
+    var a = toXY(CENTERLINE[i][0], CENTERLINE[i][1]);
+    var b = toXY(CENTERLINE[i + 1][0], CENTERLINE[i + 1][1]);
+    var dx = b[0] - a[0], dy = b[1] - a[1], len2 = dx * dx + dy * dy;
+    var t = len2 ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    var cx = a[0] + t * dx, cy = a[1] + t * dy;
+    var ex = p[0] - cx, ey = p[1] - cy, dist = Math.sqrt(ex * ex + ey * ey);
+    if (!best || dist < best.dist) best = { ct: (dx * ey - dy * ex) / (Math.sqrt(len2) || 1), dist: dist };
+  }
+  return best;
+}
+
+/* ---- rendering ---- */
+function el(id) { return document.getElementById(id); }
+function esc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function sideLabel(key) { return key === "SE" ? "My side — 1558" : "Across the street — odd numbers"; }
+
+function renderSideCards() {
+  var html = "";
+  ["SE", "NW"].forEach(function (key) {
+    var s = DATA.sides[key];
+    html += '<div class="card"><div class="label">' + esc(s.label) + '</div>';
+    if (s.status === "established") {
+      var w = s.windows[0];
+      html += '<div style="font-size:21px;font-weight:700;margin-top:4px">' + esc(windowHeadline(w)) + '</div>';
+      html += '<div class="sign">Sign says: <span class="fr">' + esc(w.verbatim) + '</span><br>'
+        + '<span class="note">' + w.signs.length + ' pole(s) on this side carry this sign ('
+        + w.signs.map(function (g) { return Math.round(Math.abs(g.along_track_from_home_block_m)) + " m " +
+            (g.along_track_from_home_block_m < 0 ? "NE" : "SW") + " of 1558"; }).join("; ")
+        + '). Data as of ' + esc(DATA.data_as_of) + '.</span></div>';
+      if (w.exception) {
+        html += '<div class="warnline">Except resident-permit holders (' + esc(w.exception) + '). '
+          + 'This is the conservative reading — it applies to you unless you hold a resident permit for this street.</div>';
+      }
+    } else if (s.status === "conflict") {
+      html += '<div style="font-size:20px;font-weight:700;margin-top:4px">Two different windows found — unresolved</div>'
+        + '<div class="note">The app does not pick one. Check the physical signs.</div>';
+      s.conflicting_windows.forEach(function (w) {
+        html += '<div class="sign">Sign says: <span class="fr">' + esc(w.verbatim) + '</span><br>'
+          + '<span class="note">' + w.pole_count + ' pole(s)</span></div>';
+      });
+    } else if (s.status === "ambiguous") {
+      html += '<div style="font-size:20px;font-weight:700;margin-top:4px">Couldn&rsquo;t verify a window for this side</div>'
+        + '<div class="note">' + esc(s.reason) + '</div>';
+      s.ambiguous_signs.forEach(function (a) {
+        html += '<div class="sign">Sign says: <span class="fr">' + esc(a.verbatim) + '</span><br>'
+          + '<span class="note">Couldn&rsquo;t parse this sign reliably.</span></div>';
+      });
+    } else {
+      html += '<div style="font-size:20px;font-weight:700;margin-top:4px">Not established for this side yet — the data doesn&rsquo;t say</div>'
+        + '<div class="note">' + esc(s.reason) + '</div>';
+    }
+    if (s.permanent_ban_note) {
+      html += '<div class="warnline">' + esc(s.permanent_ban_note) + '</div>';
+      if (s.permanent_ban_signs && s.permanent_ban_signs.length) {
+        html += '<div class="sign">Sign says: <span class="fr">' + esc(s.permanent_ban_signs[0].verbatim) + '</span>'
+          + '<span class="note"> (' + s.permanent_ban_signs.length + ' such panel(s) on this side)</span></div>';
+      }
+    }
+    html += "</div>";
+  });
+  el("sideCards").innerHTML = html;
+}
+
+function getSelectedSide() {
+  try { return localStorage.getItem(LS_KEY); } catch (e) { return null; }
+}
+function setSelectedSide(key) {
+  try {
+    if (key) localStorage.setItem(LS_KEY, key); else localStorage.removeItem(LS_KEY);
+  } catch (e) { /* private mode — selection just won't persist */ }
+  renderAll();
+}
+
+/* Pure hero decision (exposed for tests): what the hero shows for a side at a time.
+   Returns { mode, title, count, detail, showIcs, exception }.
+   mode: 'prompt' (no side) | 'no_window' | 'now' | 'next' | 'season_over' | 'error' */
+function heroState(key, now) {
+  if (!key) return { mode: "prompt" };
+  var s = DATA.sides[key];
+  if (!s || s.status !== "established") {
+    return { mode: "no_window", showIcs: false,
+             title: "No verified window",
+             detail: "This side has no verified cleaning window, so there is nothing to count down to. "
+               + "That is not the same as “no restriction” — check the physical sign." };
+  }
+  var w = s.windows[0];
+  var nw = nextWindow(w, now);
+  if (!nw) return { mode: "error", showIcs: false, title: "No window found",
+                    detail: "Could not compute a next window from the data." };
+  if (nw.state === "now") {
+    return { mode: "now", showIcs: true, title: "Cleaning now — move the car",
+             count: "ends " + fmtTimeToronto(nw.end),
+             detail: "Window ends in " + fmtCountdown(nw.end - now)
+               + " (" + fmtDateToronto(nw.start) + ", " + fmtTimeToronto(nw.start) + "–" + fmtTimeToronto(nw.end) + ").",
+             exception: w.exception || null };
+  }
+  if (nw.state === "season_over") {
+    return { mode: "season_over", showIcs: true, title: "Season ended — resumes " + seasonStartLabel(w),
+             count: fmtDateToronto(nw.start),
+             detail: "First window of next season: " + fmtDateToronto(nw.start) + ", "
+               + fmtTimeToronto(nw.start) + "–" + fmtTimeToronto(nw.end) + ". No cleaning windows until then.",
+             exception: w.exception || null };
+  }
+  return { mode: "next", showIcs: true,
+           title: fmtDateToronto(nw.start) + " — " + fmtTimeToronto(nw.start) + "–" + fmtTimeToronto(nw.end),
+           count: "in " + fmtCountdown(nw.start - now),
+           detail: windowHeadline(w) + ".",
+           exception: w.exception || null };
+}
+
+function renderHero() {
+  var key = getSelectedSide();
+  var hero = el("heroCard"), banner = el("parkedBanner");
+  el("btnSE").classList.toggle("selected", key === "SE");
+  el("btnNW").classList.toggle("selected", key === "NW");
+  if (!key) { hero.classList.add("hidden"); banner.classList.add("hidden"); return; }
+  banner.classList.remove("hidden");
+  el("parkedSide").textContent = sideLabel(key);
+  var st = heroState(key, new Date());
+  hero.classList.remove("hidden");
+  hero.classList.toggle("now", st.mode === "now");
+  el("heroLabel").textContent = "Next cleaning window — " + sideLabel(key);
+  el("heroTitle").textContent = st.title || "—";
+  el("heroCount").textContent = st.count || "—";
+  el("heroDetail").textContent = st.detail || "";
+  el("icsBtn").classList.toggle("hidden", !st.showIcs);
+  var ex = el("heroException");
+  if (st.exception) {
+    ex.classList.remove("hidden");
+    ex.textContent = "Except resident-permit holders (" + st.exception + "). Conservative reading: "
+      + "this applies to you unless you hold a resident permit for this street.";
+  } else {
+    ex.classList.add("hidden");
+  }
+}
+
+function renderAll() {
+  el("asOf").textContent = DATA.data_as_of;
+  var a2 = document.querySelectorAll(".asOf2");
+  for (var i = 0; i < a2.length; i++) a2[i].textContent = DATA.data_as_of;
+  renderSideCards();
+  renderHero();
+}
+
+function checkGps() {
+  var st = el("gpsStatus");
+  if (!("geolocation" in navigator)) {
+    st.textContent = "This browser has no location. Showing your home block (1558 des Pins Ouest).";
+    return;
+  }
+  st.textContent = "Waiting for a fix…";
+  navigator.geolocation.getCurrentPosition(function (pos) {
+    var s = snap(pos.coords.latitude, pos.coords.longitude);
+    var hp = toXY(pos.coords.latitude, pos.coords.longitude);
+    var homeDist = Math.round(Math.sqrt(hp[0] * hp[0] + hp[1] * hp[1]));
+    if (s.dist <= 30) {
+      st.textContent = "You are on Avenue des Pins Ouest — near 1558 (about " + homeDist
+        + " m from home, ±" + Math.round(pos.coords.accuracy) + " m). This confirms the street, not the side — tap your side below.";
+    } else {
+      st.textContent = "Your GPS puts you " + Math.round(s.dist)
+        + " m from des Pins Ouest — showing your home block (1558) anyway. Tap your side below.";
+    }
+  }, function () {
+    st.textContent = "Location unavailable — showing your home block (1558 des Pins Ouest). Tap your side below.";
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+}
+
+function exportIcs() {
+  var key = getSelectedSide();
+  if (!key) return;
+  var s = DATA.sides[key];
+  if (s.status !== "established") return;
+  var ics = buildIcs(key, s.windows[0], new Date());
+  if (!ics) return;
+  var blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "ticket-saver-" + key.toLowerCase() + "-des-pins-ouest.ics";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+function init() {
+  renderAll();
+  el("btnSE").addEventListener("click", function () { setSelectedSide("SE"); });
+  el("btnNW").addEventListener("click", function () { setSelectedSide("NW"); });
+  el("clearSide").addEventListener("click", function () { setSelectedSide(null); });
+  el("icsBtn").addEventListener("click", exportIcs);
+  el("gpsBtn").addEventListener("click", checkGps);
+  checkGps();
+  setInterval(renderHero, 30000);
+}
+
+if (typeof document !== "undefined" && document.addEventListener) {
+  document.addEventListener("DOMContentLoaded", init);
+}
+/* Test hook (also handy in the console): pure date/.ics logic. */
+if (typeof window !== "undefined") {
+  window.__ticketSaver = { nextWindow: nextWindow, buildIcs: buildIcs,
+    fmtCountdown: fmtCountdown, windowHeadline: windowHeadline, heroState: heroState,
+    torontoToUtc: torontoToUtc, tzParts: tzParts, inSeason: inSeason, DATA: DATA };
+}
+</script>
+</body>
+</html>
