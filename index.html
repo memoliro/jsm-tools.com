@@ -80,7 +80,7 @@ body.dark-mode .demo-note a{color:#93c5fd}
 .demo-card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:20px;display:flex;flex-direction:column;gap:10px}
 .demo-card h3{font-size:16px;margin:0;color:var(--text)}
 .demo-card p{color:var(--muted);font-size:13px;line-height:1.6;margin:0}
-.demo-drop{border:2px dashed #52637c;border-radius:12px;padding:16px;text-align:center;cursor:pointer;color:var(--text);background:var(--soft);font-size:14px}
+.demo-drop{display:block;border:2px dashed #52637c;border-radius:12px;padding:16px;text-align:center;cursor:pointer;color:var(--text);background:var(--soft);font-size:14px}
 .demo-drop:hover,.demo-drop.dragover{border-color:#31c48d}
 .demo-drop input{display:none}
 .demo-btn{border:1px solid var(--border);background:var(--soft);color:var(--text);border-radius:9px;padding:9px 14px;cursor:pointer;font:inherit;font-size:13px;font-weight:700;transition:.15s;text-decoration:none;display:inline-block;text-align:center}
@@ -98,7 +98,7 @@ body.dark-mode .demo-note a{color:#93c5fd}
 .demo-textarea{min-height:110px;resize:vertical;line-height:1.5}
 .demo-output{white-space:pre-wrap;word-break:break-word;background:var(--soft);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:13px;line-height:1.6;color:var(--text);margin:0;max-height:220px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace}
 .demo-canvas{width:100%;height:auto;display:block;border:1px solid var(--border);border-radius:10px;background:var(--soft)}
-.demo-video{width:100%;max-width:480px;height:auto;display:block;border-radius:12px;border:1px solid var(--border);margin:0 auto}
+.demo-video{width:100%;max-width:720px;height:auto;display:block;border-radius:12px;border:1px solid var(--border);margin:0 auto}
 .demo-img{width:100%;height:auto;display:block;border-radius:12px;border:1px solid var(--border)}
 .demo-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .demo-row .demo-field{flex:1;min-width:110px}
@@ -106,11 +106,12 @@ body.dark-mode .demo-note a{color:#93c5fd}
 .bytes-num small{font-size:16px;font-weight:700;color:var(--muted)}
 .bytes-label{text-align:center;font-size:13px;color:var(--muted);line-height:1.5}
 .journey{display:block;width:100%;max-width:640px;height:auto;margin:6px auto 14px}
+.journey-v{display:none}
 /* P7: the Enhance AI note gets real presence (same size as card text) */
 .group-note{max-width:640px;margin:-6px auto 0;background:var(--soft);border:1px solid var(--border);border-radius:10px;padding:12px 16px;color:var(--text);font-size:13px;line-height:1.6;text-align:center}
 /* Support: room for a second button (Ko-Fi, URL owed) */
 .support-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:6px}
-@media(max-width:600px){.hero-proof{margin-top:16px}.demo-panel{padding:16px}.bytes-num{font-size:36px}}
+@media(max-width:600px){.hero-proof{margin-top:16px}.demo-panel{padding:16px}.bytes-num{font-size:36px}.journey-h{display:none}.journey-v{display:block}}
 </style>
 
 <script type="application/ld+json">
@@ -206,16 +207,16 @@ body.dark-mode .demo-note a{color:#93c5fd}
   <p class="hub-verified">Verified for every tool below — each one was checked for upload endpoints before it was listed.</p>
   <figure class="hero-proof" aria-label="Before and after: the same photo, original and compressed in your browser">
     <div class="ba-wrap" data-ba style="--pos:50%">
-      <img src="/assets/demo-compressed.jpg" alt="Same market photo compressed in your browser — 227 KB" width="1280" height="853">
+      <img src="/assets/demo-compressed.jpg" alt="Same market photo compressed in your browser — 228 KB" width="1280" height="853">
       <div class="ba-before">
         <img src="/assets/demo-original.jpg" alt="Original market photo — 269 KB" width="1280" height="853">
       </div>
       <span class="ba-tag ba-tag-before">Original · 269 KB</span>
-      <span class="ba-tag ba-tag-after">Compressed · 227 KB</span>
+      <span class="ba-tag ba-tag-after">Compressed · 228 KB</span>
       <div class="ba-handle" aria-hidden="true"><span>↔</span></div>
       <input class="ba-range" type="range" min="0" max="100" value="50" step="0.1" aria-label="Drag to compare the original and compressed photo">
     </div>
-    <figcaption>Drag the handle — left is the original photo (269 KB), right is the same photo compressed in your browser (227 KB, 15% smaller). This is JSM Image's own demo photo. Nothing was uploaded to make this comparison.</figcaption>
+    <figcaption>Drag the handle — left is the original photo (269 KB), right is the same photo compressed in your browser (228 KB, 15% smaller). This is JSM Image's own demo photo. Nothing was uploaded to make this comparison.</figcaption>
   </figure>
 </section>
 
@@ -379,7 +380,7 @@ We are going home now, feet back on the ground</pre>
         <button class="demo-preset" type="button" data-q="90">Best · 90</button>
       </div>
       <label class="demo-field"><span class="demo-field-head">Quality <span id="qualityVal">70</span></span><input class="demo-range" type="range" id="qualityRange" min="10" max="100" value="70"></label>
-      <p class="demo-stats" id="compressStats">Demo photo loaded: Original 269 KB → Compressed 227 KB (−15%). Output is JPEG.</p>
+      <p class="demo-stats" id="compressStats">Demo photo loaded: Original 269 KB → Compressed 228 KB (−15%). Output is JPEG.</p>
       <a class="demo-btn primary" id="compressDownload" href="/assets/demo-compressed.jpg" download="demo-compressed.jpg" style="display:none">Download compressed</a>
     </div>
     <div class="demo-card" id="lyricsDemo">
@@ -407,7 +408,7 @@ We are going home now, feet back on the ground</pre>
 
 <div class="content-page">
   <h2>What never happens to your files</h2>
-  <svg class="journey" viewBox="0 0 640 142" role="img" aria-label="Your file's journey: your device, to browser memory, to download. No server involved.">
+  <svg class="journey journey-h" viewBox="0 0 640 142" role="img" aria-label="Your file's journey: your device, to browser memory, to download. No server involved.">
     <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#64748b"/></marker></defs>
     <rect x="10" y="35" width="150" height="60" rx="12" fill="#fff" stroke="#e2e8f0"/>
     <text x="85" y="60" text-anchor="middle" font-size="14" font-weight="bold" fill="#1d2433">Your device</text>
@@ -421,6 +422,21 @@ We are going home now, feet back on the ground</pre>
     <text x="515" y="60" text-anchor="middle" font-size="14" font-weight="bold" fill="#1d2433">Download</text>
     <text x="515" y="80" text-anchor="middle" font-size="12" fill="#64748b">result saved to you</text>
     <g transform="translate(270 120)"><circle cx="0" cy="0" r="11" fill="#fff" stroke="#dc2626" stroke-width="2"/><line x1="-6" y1="-6" x2="6" y2="6" stroke="#dc2626" stroke-width="2"/><line x1="6" y1="-6" x2="-6" y2="6" stroke="#dc2626" stroke-width="2"/><text x="16" y="4" font-size="12" fill="#dc2626">no server in the middle</text></g>
+  </svg>
+  <svg class="journey journey-v" viewBox="0 0 320 320" role="img" aria-label="Your file's journey: your device, to browser memory, to download. No server involved.">
+    <defs><marker id="arrV" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#64748b"/></marker></defs>
+    <rect x="30" y="10" width="260" height="60" rx="12" fill="#fff" stroke="#e2e8f0"/>
+    <text x="160" y="35" text-anchor="middle" font-size="14" font-weight="bold" fill="#1d2433">Your device</text>
+    <text x="160" y="55" text-anchor="middle" font-size="12" fill="#64748b">your file starts here</text>
+    <line x1="160" y1="72" x2="160" y2="92" stroke="#64748b" stroke-width="2" marker-end="url(#arrV)"/>
+    <rect x="30" y="95" width="260" height="60" rx="12" fill="#f0fdf4" stroke="#16a34a"/>
+    <text x="160" y="120" text-anchor="middle" font-size="14" font-weight="bold" fill="#1d2433">Browser memory</text>
+    <text x="160" y="140" text-anchor="middle" font-size="12" fill="#64748b">processed, never sent</text>
+    <line x1="160" y1="157" x2="160" y2="177" stroke="#64748b" stroke-width="2" marker-end="url(#arrV)"/>
+    <rect x="30" y="180" width="260" height="60" rx="12" fill="#fff" stroke="#e2e8f0"/>
+    <text x="160" y="205" text-anchor="middle" font-size="14" font-weight="bold" fill="#1d2433">Download</text>
+    <text x="160" y="225" text-anchor="middle" font-size="12" fill="#64748b">result saved to you</text>
+    <g transform="translate(92 285)"><circle cx="0" cy="0" r="11" fill="#fff" stroke="#dc2626" stroke-width="2"/><line x1="-6" y1="-6" x2="6" y2="6" stroke="#dc2626" stroke-width="2"/><line x1="6" y1="-6" x2="-6" y2="6" stroke="#dc2626" stroke-width="2"/><text x="16" y="4" font-size="12" fill="#dc2626">no server in the middle</text></g>
   </svg>
   <ul>
     <li><strong>Your files are never uploaded to a server</strong> — processing happens in your browser's memory.</li>
@@ -670,14 +686,14 @@ function isChordLine(line){
   return parts.every(function(p){ return CHORD_TOKEN.test(p); });
 }
 function formatLyrics(raw){
-  var removedChords = 0, removedInline = 0, sections = 0;
+  var removedChords = 0, removedInline = 0, removedRepeats = 0, sections = 0;
   var out = [];
   raw.replace(/\r\n?/g, '\n').split('\n').forEach(function(line){
     var t = line.trim();
     if(isChordLine(t)){ removedChords++; return; }
     var m = t.match(/^(.*?)\s*\((?:x|repeat\s*x?)\s*\d*\)\s*$/i);
-    if(m && m[1].trim()){ t = m[1].trim(); }
-    else if(/^\((?:x|repeat)\s*\d*\)$/i.test(t)){ removedChords++; return; }
+    if(m && m[1].trim()){ t = m[1].trim(); removedRepeats++; }
+    else if(/^\((?:x|repeat)\s*\d*\)$/i.test(t)){ removedRepeats++; return; }
     t = t.replace(/\[([A-G][#b]?(?:m|maj|min|dim|aug|sus|add)?[0-9]?)\]/g, function(){ removedInline++; return ''; }).replace(/\s{2,}/g, ' ').trim();
     var tag = t.replace(/^\[|\]$/g, '').replace(/:\s*$/, '').trim();
     var num = '';
@@ -689,7 +705,7 @@ function formatLyrics(raw){
     out.push(t);
   });
   var text = out.join('\n').replace(/\n{3,}/g, '\n\n').replace(/^\n+|\n+$/g, '');
-  return { text: text, removedChords: removedChords, removedInline: removedInline, sections: sections };
+  return { text: text, removedChords: removedChords, removedInline: removedInline, removedRepeats: removedRepeats, sections: sections };
 }
 var EXAMPLE_LYRICS = 'verse\nG   C   D\nwalking down the old road, dust on my shoes\nsinging to the morning [Am] nothing left to lose\n\nCHORUS:\nHold on (x2)\nhold on to the sunlight\n\nverse 2\nwe are going home now';
 var lyricsInput = $('lyricsInput'), lyricsOutput = $('lyricsOutput'), lyricsStats = $('lyricsStats');
@@ -699,7 +715,7 @@ function runLyrics(){
   var r = formatLyrics(raw);
   lyricsOutput.textContent = r.text || '(nothing left after cleaning)';
   var lines = r.text ? r.text.split('\n').length : 0;
-  lyricsStats.textContent = lines + ' lines · ' + r.sections + ' section' + (r.sections === 1 ? '' : 's') + ' · ' + r.removedChords + ' chord line' + (r.removedChords === 1 ? '' : 's') + ' removed · ' + r.removedInline + ' inline chord' + (r.removedInline === 1 ? '' : 's') + ' removed.';
+  lyricsStats.textContent = lines + ' lines · ' + r.sections + ' section' + (r.sections === 1 ? '' : 's') + ' · ' + r.removedChords + ' chord line' + (r.removedChords === 1 ? '' : 's') + ' removed · ' + r.removedInline + ' inline chord' + (r.removedInline === 1 ? '' : 's') + ' removed · ' + r.removedRepeats + ' repeat' + (r.removedRepeats === 1 ? '' : 's') + ' removed.';
 }
 if(lyricsInput){
   $('lyricsExample').addEventListener('click', function(){ lyricsInput.value = EXAMPLE_LYRICS; runLyrics(); });
