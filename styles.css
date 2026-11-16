@@ -520,6 +520,8 @@ body.dark-mode .fit-option:has(input:checked) .fit-option-content span {
 .support-card p{color:var(--muted);font-size:15px;line-height:1.6;margin-bottom:18px}
 .bmc-btn{display:inline-flex;align-items:center;gap:8px;background:#FFDD00;color:#000!important;font-weight:700;font-size:15px;padding:12px 24px;border-radius:999px;text-decoration:none;transition:transform .15s ease,box-shadow .15s ease}
 .bmc-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,0,0,.15)}
+.kofi-btn{display:inline-flex;align-items:center;gap:8px;background:#13c3a5;color:#fff!important;font-weight:700;font-size:15px;padding:12px 24px;border-radius:999px;text-decoration:none;transition:transform .15s ease,box-shadow .15s ease}
+.kofi-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,0,0,.15)}
 
 /* ===== Header nav: Privacy dropdown + hamburger (2026-10-05) ===== */
 .header-actions nav .nav-drop{position:relative}
