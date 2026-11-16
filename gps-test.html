@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ticket Saver — GPS side test (des Pins Ouest)</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+         margin: 0; padding: 16px; background: #111; color: #f2f2f2; font-size: 18px; line-height: 1.45; }
+  h1 { font-size: 24px; margin: 0 0 4px 0; }
+  .sub { color: #bbb; font-size: 16px; margin-bottom: 14px; }
+  .card { background: #1d1d1d; border: 1px solid #333; border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+  .big { font-size: 34px; font-weight: 800; line-height: 1.15; }
+  .row { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; }
+  .row b { font-variant-numeric: tabular-nums; text-align: right; }
+  .label { color: #bbb; }
+  .pill { display: inline-block; padding: 4px 12px; border-radius: 999px; font-weight: 700; font-size: 17px; }
+  .good { background: #14532d; color: #bbf7d0; }
+  .warn { background: #713f12; color: #fde68a; }
+  .bad  { background: #7f1d1d; color: #fecaca; }
+  .neutral { background: #333; color: #ddd; }
+  button { font-size: 20px; font-weight: 700; padding: 14px 20px; border-radius: 12px; border: 0;
+           background: #16a34a; color: #fff; width: 100%; margin: 6px 0; }
+  button.stop { background: #b91c1c; }
+  button.copy { background: #334155; }
+  button:disabled { opacity: 0.5; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th, td { text-align: left; padding: 5px 4px; border-bottom: 1px solid #333; font-variant-numeric: tabular-nums; }
+  th { color: #bbb; font-weight: 600; }
+  .hint { font-size: 16px; color: #ccc; }
+  .hint li { margin-bottom: 6px; }
+  #status { font-size: 17px; }
+  .mono { font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<h1>GPS side test</h1>
+<div class="sub">Avenue des Pins Ouest, Montreal &mdash; which side of the street is the phone on?</div>
+
+<div class="card">
+  <div id="status">Not started. Tap <b>Start GPS</b> and stand on the street.</div>
+  <button id="startBtn">Start GPS</button>
+  <button id="stopBtn" class="stop" disabled>Stop</button>
+</div>
+
+<div class="card">
+  <div class="label">Side of the street (from the latest fix)</div>
+  <div class="big" id="side">—</div>
+  <div class="row"><span class="label">Distance from road centreline</span><b id="ct">—</b></div>
+  <div class="row"><span class="label">Confidence</span><span class="pill neutral" id="conf">—</span></div>
+  <div class="hint" id="confNote" style="margin-top:8px"></div>
+</div>
+
+<div class="card">
+  <div class="label">Latest fix</div>
+  <div class="row"><span class="label">Latitude</span><b id="lat">—</b></div>
+  <div class="row"><span class="label">Longitude</span><b id="lng">—</b></div>
+  <div class="row"><span class="label">Reported accuracy</span><b id="acc">—</b></div>
+  <div class="row"><span class="label">Fix # / time</span><b id="fixno">—</b></div>
+  <div class="row"><span class="label">Distance from 1558 des Pins O</span><b id="homeDist">—</b></div>
+</div>
+
+<div class="card">
+  <div class="label">Best fix so far (smallest reported accuracy)</div>
+  <div class="row"><span class="label">Side</span><b id="bestSide">—</b></div>
+  <div class="row"><span class="label">Cross-track / accuracy</span><b id="bestCt">—</b></div>
+</div>
+
+<div class="card">
+  <div class="label">Recent fixes (newest first &mdash; watch the side flip as fixes refine)</div>
+  <table>
+    <thead><tr><th>Time</th><th>Acc.</th><th>Off-centre</th><th>Side</th></tr></thead>
+    <tbody id="log"><tr><td colspan="4">No fixes yet.</td></tr></tbody>
+  </table>
+  <button id="copyBtn" class="copy">Copy results to clipboard</button>
+</div>
+
+<div class="card">
+  <div class="label">How to test</div>
+  <ol class="hint">
+    <li>Stand <b>on the street itself, at the kerb</b>, on the north-west side (toward Mount Royal). Wait ~30 seconds and read the side + confidence.</li>
+    <li>Cross to the <b>south-east side</b> (the 1558 side), same thing, ~30 seconds.</li>
+    <li>Compare: does the page say NW on the NW side and SE on the SE side &mdash; and does it stay stable, or flip?</li>
+    <li>Ignore readings taken from inside the house or on the sidewalk: the house is ~25 m from the centreline, so that side is trivially easy and proves nothing.</li>
+    <li>The street is only ~10 m wide (parked cars sit ~3.5 m from the centre). A reported accuracy bigger than ~5 m means the phone itself is telling you it cannot tell the sides apart.</li>
+  </ol>
+  <div class="hint">Centreline: real OpenStreetMap geometry for des Pins Ouest, 40 points over ~533 m, embedded in this file. No network needed. Works from file:// or any static host &mdash; if the browser refuses location on file://, open it over https instead.</div>
+</div>
+
+<script>
+"use strict";
+/* Centreline of Avenue des Pins Ouest, NE -> SW (direction of one-way travel).
+   From OpenStreetMap via Overpass API, 2026-11-16 (see centerline.json).
+   [lat, lon] pairs. Cross-track sign: + = SE side (left of travel),
+   - = NW side (right of travel). Home (1558) is on the SE side, ~24.7 m off centre. */
+var CENTERLINE = [
+[45.5006584,-73.5851514],[45.5005701,-73.5852105],[45.5003879,-73.5853258],[45.5003563,-73.5853464],
+[45.5002708,-73.5853745],[45.5002418,-73.5853855],[45.5001439,-73.5854246],[45.4997678,-73.5855569],
+[45.4995303,-73.5856403],[45.4994151,-73.5856816],[45.4993727,-73.5856960],[45.4993246,-73.5857123],
+[45.4991263,-73.5857886],[45.4990660,-73.5858122],[45.4990177,-73.5858323],[45.4989699,-73.5858562],
+[45.4989294,-73.5858803],[45.4988842,-73.5859079],[45.4988411,-73.5859403],[45.4987494,-73.5860100],
+[45.4986233,-73.5861056],[45.4982212,-73.5864134],[45.4981849,-73.5864412],[45.4981556,-73.5864639],
+[45.4980682,-73.5865329],[45.4979543,-73.5866203],[45.4977742,-73.5867603],[45.4976310,-73.5868712],
+[45.4973746,-73.5870700],[45.4971428,-73.5872498],[45.4971033,-73.5872819],[45.4967717,-73.5875545],
+[45.4967062,-73.5876098],[45.4966858,-73.5876258],[45.4966634,-73.5876429],[45.4966228,-73.5876732],
+[45.4965684,-73.5877175],[45.4965043,-73.5877682],[45.4964025,-73.5878463],[45.4962814,-73.5878955]
+];
+var HOME_LAT = 45.49758, HOME_LON = -73.58655;   /* 1558 avenue des Pins Ouest */
+var HALF_WIDTH_M = 5.0;                          /* carriageway ~10 m wide */
+var REF_LAT = 45.49758, REF_LON = -73.58655;
+var COSLAT = Math.cos(REF_LAT * Math.PI / 180);
+
+function toXY(lat, lon) {
+  return [(lon - REF_LON) * 111320 * COSLAT, (lat - REF_LAT) * 110540];
+}
+/* Snap a lat/lon to the centreline. Returns {ct, dist, seg} where ct is the
+   signed cross-track in metres (+ = SE side, - = NW side). */
+function snap(lat, lon) {
+  var p = toXY(lat, lon), best = null;
+  for (var i = 0; i < CENTERLINE.length - 1; i++) {
+    var a = toXY(CENTERLINE[i][0], CENTERLINE[i][1]);
+    var b = toXY(CENTERLINE[i + 1][0], CENTERLINE[i + 1][1]);
+    var dx = b[0] - a[0], dy = b[1] - a[1];
+    var len2 = dx * dx + dy * dy;
+    var t = len2 ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    var cx = a[0] + t * dx, cy = a[1] + t * dy;
+    var ex = p[0] - cx, ey = p[1] - cy;
+    var dist = Math.sqrt(ex * ex + ey * ey);
+    if (!best || dist < best.dist) {
+      var len = Math.sqrt(len2) || 1;
+      /* cross = dx*(py-cy) - dy*(px-cx), over segment length:
+         + means the point is LEFT of the NE->SW direction of travel = SE side */
+      var ct = (dx * ey - dy * ex) / len;
+      best = { ct: ct, dist: dist, seg: i };
+    }
+  }
+  return best;
+}
+function sideName(ct) {
+  if (ct >= 0) return "SE side (1558 / south-east side)";
+  return "NW side (Mount Royal / north-west side)";
+}
+function sideShort(ct) { return ct >= 0 ? "SE" : "NW"; }
+function fmt(n, d) { return n.toFixed(d === undefined ? 1 : d); }
+
+var watchId = null, fixCount = 0, bestFix = null, logRows = [];
+
+function el(id) { return document.getElementById(id); }
+function setStatus(msg) { el("status").textContent = msg; }
+
+function confidence(ct, acc) {
+  var act = Math.abs(ct);
+  if (acc >= act) {
+    return { cls: "bad", text: "NOT RELIABLE",
+      note: "The phone's own error circle (±" + fmt(acc, 0) + " m) is bigger than your distance " +
+        "from the road centre (" + fmt(act, 1) + " m). The side call is basically a coin flip right now. " +
+        "Wait for fixes to refine — if accuracy stays above ~5 m, the phone cannot tell the sides apart." };
+  }
+  if (acc >= act / 2) {
+    return { cls: "warn", text: "UNCERTAIN",
+      note: "Reported accuracy (±" + fmt(acc, 0) + " m) is a large fraction of your distance from the " +
+        "centre (" + fmt(act, 1) + " m). The side is probably right, but a small error flips it. " +
+        "Note: the phone's accuracy number does NOT include multipath bias (reflections off buildings), " +
+        "so even a green-looking reading can be wrong on this street." };
+  }
+  return { cls: "good", text: "USABLE (with a caveat)",
+    note: "Reported accuracy (±" + fmt(acc, 0) + " m) is well under your distance from the centre (" +
+      fmt(act, 1) + " m), so this side call is likely right — BUT the accuracy number ignores multipath " +
+      "bias, which on a built-up street can be several metres and is invisible to the phone. " +
+      "Trust it only if it stays stable for 30+ seconds." };
+}
+
+function onFix(pos) {
+  fixCount++;
+  var lat = pos.coords.latitude, lon = pos.coords.longitude;
+  var acc = pos.coords.accuracy;               /* metres, ~68% radius */
+  var s = snap(lat, lon);
+  var now = new Date(pos.timestamp);
+  var hhmmss = now.toTimeString().slice(0, 8);
+
+  el("lat").textContent = lat.toFixed(7);
+  el("lng").textContent = lon.toFixed(7);
+  el("acc").textContent = "±" + fmt(acc, 0) + " m";
+  el("fixno").textContent = "#" + fixCount + " · " + hhmmss;
+  var hp = toXY(lat, lon);
+  el("homeDist").textContent = fmt(Math.sqrt(hp[0] * hp[0] + hp[1] * hp[1]), 0) + " m";
+  el("side").textContent = sideName(s.ct);
+  el("ct").textContent = fmt(Math.abs(s.ct), 1) + " m " + (s.ct >= 0 ? "SE" : "NW") + " of centre" +
+    (Math.abs(s.ct) > HALF_WIDTH_M + 3 ? " — off the carriageway (sidewalk / building?)" : " — on the carriageway");
+  var c = confidence(s.ct, acc);
+  var confEl = el("conf");
+  confEl.textContent = c.text;
+  confEl.className = "pill " + c.cls;
+  el("confNote").textContent = c.note;
+  setStatus("GPS running — fix #" + fixCount + " (segment " + s.seg + " of the centreline).");
+
+  if (!bestFix || acc < bestFix.acc) {
+    bestFix = { ct: s.ct, acc: acc, lat: lat, lon: lon, n: fixCount };
+    el("bestSide").textContent = sideName(s.ct);
+    el("bestCt").textContent = fmt(Math.abs(s.ct), 1) + " m " + sideShort(s.ct) + " · ±" + fmt(acc, 0) + " m";
+  }
+
+  logRows.unshift({ t: hhmmss, acc: acc, ct: s.ct });
+  if (logRows.length > 10) logRows.pop();
+  var html = "";
+  for (var i = 0; i < logRows.length; i++) {
+    var r = logRows[i];
+    html += "<tr><td>" + r.t + "</td><td>±" + fmt(r.acc, 0) + " m</td><td>" +
+      fmt(Math.abs(r.ct), 1) + " m " + sideShort(r.ct) + "</td><td>" + sideShort(r.ct) + "</td></tr>";
+  }
+  el("log").innerHTML = html;
+}
+
+function onError(err) {
+  var msg = "GPS error: ";
+  if (err.code === 1) msg += "permission denied — allow location for this page in the browser settings and try again.";
+  else if (err.code === 2) msg += "position unavailable — are location services on?";
+  else if (err.code === 3) msg += "timed out waiting for a fix — try again outdoors.";
+  else msg += err.message;
+  setStatus(msg);
+}
+
+el("startBtn").addEventListener("click", function () {
+  if (!("geolocation" in navigator)) {
+    setStatus("This browser has no geolocation API.");
+    return;
+  }
+  fixCount = 0; bestFix = null; logRows = [];
+  el("log").innerHTML = "<tr><td colspan='4'>Waiting for first fix…</td></tr>";
+  setStatus("Waiting for first fix… (high accuracy requested)");
+  watchId = navigator.geolocation.watchPosition(onFix, onError,
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
+  el("startBtn").disabled = true;
+  el("stopBtn").disabled = false;
+});
+el("stopBtn").addEventListener("click", function () {
+  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+  watchId = null;
+  setStatus("Stopped after " + fixCount + " fixes.");
+  el("startBtn").disabled = false;
+  el("stopBtn").disabled = true;
+});
+el("copyBtn").addEventListener("click", function () {
+  var lines = ["Ticket Saver GPS side test — des Pins Ouest, " + new Date().toISOString(),
+    "Fixes: " + fixCount + (bestFix ? (" | Best fix: " + sideShort(bestFix.ct) + " side, " +
+      fmt(Math.abs(bestFix.ct), 1) + " m off centre, accuracy ±" + fmt(bestFix.acc, 0) + " m") : "")];
+  for (var i = 0; i < logRows.length; i++) {
+    var r = logRows[i];
+    lines.push(r.t + "  acc ±" + fmt(r.acc, 0) + " m  " + fmt(Math.abs(r.ct), 1) + " m " + sideShort(r.ct));
+  }
+  var text = lines.join("\n");
+  function done() { setStatus("Results copied — paste them into a message."); }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done, function () { setStatus(text); });
+  } else {
+    setStatus(text);
+  }
+});
+</script>
+</body>
+</html>
