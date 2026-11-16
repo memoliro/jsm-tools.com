@@ -144,7 +144,7 @@
      ]
     }
    ],
-   "permanent_ban_note": "3 no-stopping panel(s) (\\A EN TOUT TEMPS) also stand on this side — a stopping ban, not a cleaning window.",
+   "permanent_ban_note": "3 no-stopping panel(s) (\\A EN TOUT TEMPS) also stand on this side.",
    "permanent_ban_signs": [
     {
      "verbatim": "\\A EN TOUT TEMPS",
@@ -167,8 +167,8 @@
    "status": "not_established",
    "label": "Across the street — odd numbers (toward Mount Royal)",
    "windows": [],
-   "reason": "No cleaning sign for this side passed the segment + band + intersection checks in the city's signage data. Cleaning signs attributed to this side in the segment: 0 (need 2 poles with the identical window to establish one). Check the physical signs on the street — the data may be incomplete.",
-   "permanent_ban_note": "5 no-parking-at-all-times panel(s) (\\P EN TOUT TEMPS) stand on this side in the data — but each panel's reach is set by its arrow (FLECHE_PAN, undecodable), so the data cannot say whether they cover the whole side or only short stretches. Check the physical signs. 3 no-stopping panel(s) (\\A EN TOUT TEMPS) also stand on this side — a stopping ban, not a cleaning window.",
+   "reason": "No cleaning sign for this side passed the segment + band + intersection checks in the city's signage data. Cleaning signs attributed to this side in the segment: 0. The data may be incomplete.",
+   "permanent_ban_note": "5 no-parking-at-all-times panel(s) (\\P EN TOUT TEMPS) stand on this side in the data — but each panel's reach is set by its arrow (FLECHE_PAN, undecodable), so the data cannot say whether they cover the whole side or only short stretches. 3 no-stopping panel(s) (\\A EN TOUT TEMPS) also stand on this side.",
    "permanent_ban_signs": [
     {
      "verbatim": "\\P EN TOUT TEMPS",
