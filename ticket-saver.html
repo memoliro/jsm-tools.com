@@ -105,7 +105,8 @@
       <button class="action primary" id="icsBtn">Add to calendar (.ics)</button>
     </div>
     <div class="note" style="margin-top:10px">The calendar file repeats every cleaning day until
-    Dec 1. It has <b>no alarm set</b> — add one in your calendar app when you import it.
+    Dec 1. It sets an alarm <b>1 hour before</b> each cleaning window, so your calendar
+    reminds you in time.
     This page alone can&rsquo;t remind you: <b>import the file</b>, or the warning only exists
     while this page is open. If the window changes, delete this calendar and export again.</div>
   </div>
@@ -284,6 +285,9 @@ function buildIcs(sideKey, win, now) {
     "DESCRIPTION:" + icsEscape("No parking — street cleaning on the " + sideKey + " side of Avenue des Pins Ouest. "
       + "Sign says: " + win.verbatim + " Provisional data from City of Montreal open data, as of "
       + DATA.data_as_of + ". Verify against the physical sign. If the window changes, delete this calendar and re-export."),
+    "BEGIN:VALARM", "TRIGGER:-PT1H", "ACTION:DISPLAY",
+    "DESCRIPTION:" + icsEscape("Move the car — street cleaning on the " + sideKey + " side of Avenue des Pins Ouest in 1 hour."),
+    "END:VALARM",
     "END:VEVENT", "END:VCALENDAR"
   ];
   return lines.map(foldLine).join("\r\n") + "\r\n";
