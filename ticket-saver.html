@@ -24,16 +24,18 @@
          margin: 0; padding: 16px; background: var(--page); color: var(--ink);
          font-size: 18px; line-height: 1.5; }
   .wrap { max-width: 640px; margin: 0 auto; }
+  .toprow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .toprow .linkbtn { margin-top: 10px; white-space: nowrap; }
   h1 { font-size: 26px; margin: 4px 0 2px 0; line-height: 1.2; }
-  .sub { color: var(--muted); font-size: 17px; margin-bottom: 14px; }
+  .sub { color: var(--muted); font-size: 17px; margin-bottom: 10px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-          padding: 16px; margin-bottom: 14px; }
+          padding: 12px; margin-bottom: 10px; }
   .banner { background: var(--amber-bg); border: 1px solid var(--amber-line);
             color: var(--amber-ink); border-radius: 12px; padding: 12px 14px;
-            font-size: 16px; margin-bottom: 14px; }
+            font-size: 16px; margin-bottom: 10px; }
   .banner b { color: var(--amber-ink); }
   .parked { background: var(--soft-green); border: 1px solid #bfe6cf; color: #14532d;
-            border-radius: 12px; padding: 12px 14px; font-size: 18px; margin-bottom: 14px; }
+            border-radius: 12px; padding: 12px 14px; font-size: 18px; margin-bottom: 10px; }
   .parked .change { float: right; font-size: 15px; }
   .label { color: var(--muted); font-size: 16px; }
   .big { font-size: 34px; font-weight: 800; line-height: 1.15; }
@@ -41,7 +43,7 @@
   .now { background: var(--now-bg); border-color: #f3c98f; }
   .now .count, .now .big { color: var(--now-ink); }
   .sidebtn { display: block; width: 100%; text-align: left; background: var(--card);
-             border: 2px solid var(--line); border-radius: 14px; padding: 18px;
+             border: 2px solid var(--line); border-radius: 14px; padding: 14px;
              font-size: 20px; font-weight: 700; color: var(--ink); cursor: pointer;
              margin-bottom: 12px; font-family: inherit; line-height: 1.3; }
   .sidebtn small { display: block; font-size: 16px; font-weight: 400; color: var(--muted); margin-top: 4px; }
@@ -87,24 +89,17 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>Ticket Saver</h1>
-  <div class="sub">Street cleaning — Avenue des Pins Ouest, Montr&eacute;al (near 1558)</div>
-
-  <div class="banner"><b>Verified on my side.</b> The Mon/Thu 5:30&ndash;6:30 PM cleaning window
-  for my side (1558) was checked against a photo of the physical sign on Nov 16, 2026
-  (data as of <span id="asOf">—</span>), and the 7&ndash;8 AM sign at the far end of the block
-  belongs to Chemin de la C&ocirc;te-des-Neiges, not this street. The other side is still
-  unverified, and the full block has not been walked yet. <b>Always check the sign where
-  you park.</b></div>
+  <div id="mainView">
+  <div class="toprow">
+    <div>
+      <h1>Ticket Saver</h1>
+      <div class="sub">Avenue des Pins Ouest &mdash; near 1558</div>
+    </div>
+    <button class="action" id="detailsBtn">Details &#9432;</button>
+  </div>
 
   <div id="parkedBanner" class="parked hidden">You&rsquo;re parked on: <b id="parkedSide">—</b>
     <button class="linkbtn change" id="clearSide">Not parked here — clear</button>
-  </div>
-
-  <div class="card" id="gpsCard">
-    <div class="label">Your location</div>
-    <div id="gpsStatus" style="font-size:17px">Checking location&hellip;</div>
-    <button class="action" id="gpsBtn" style="margin-top:10px">Check my location</button>
   </div>
 
   <div class="card hidden" id="heroCard">
@@ -112,51 +107,73 @@
     <div class="big" id="heroTitle">—</div>
     <div class="count" id="heroCount">—</div>
     <div id="heroDetail" style="font-size:17px"></div>
-    <div id="heroException" class="warnline hidden"></div>
-    <div style="margin-top:14px">
+    <div style="margin-top:10px">
       <button class="action primary" id="icsBtn">Add to calendar (.ics)</button>
     </div>
-    <div class="note" style="margin-top:10px">The calendar file repeats every cleaning day until
-    Dec 1. It sets an alarm <b>1 hour before</b> each cleaning window, so your calendar
-    reminds you in time.
-    This page alone can&rsquo;t remind you: <b>import the file</b>, or the warning only exists
-    while this page is open. If the window changes, delete this calendar and export again.</div>
   </div>
 
   <div class="card" id="pickCard">
-    <div class="label" style="margin-bottom:10px">Where did you park? Tap your side.</div>
+    <div class="label" style="margin-bottom:10px">Where did you park?</div>
     <button class="sidebtn" id="btnSE">My side — 1558, even numbers<small>South-east side, toward downtown &middot; Gauche</small></button>
     <button class="sidebtn" id="btnNW">Across the street — odd numbers<small>North-west side, toward Mount Royal &middot; Droite</small></button>
-    <div class="note">GPS can&rsquo;t tell the sides apart on this street (the two parking rows are
-    only ~7&nbsp;m apart) — that&rsquo;s why you tap. Your choice is saved on this device only.</div>
   </div>
 
   <div class="card" id="limitCard">
     <div class="label">Parking limit timer</div>
-    <div style="font-size:17px;margin-top:4px">Tap the limit on the sign where you parked &mdash;
-    the timer starts now. This is separate from the cleaning window above.</div>
     <div class="limitgrid" id="limitTiles">
-      <button class="limittile" data-limit="15">15 min<small>short stop</small></button>
-      <button class="limittile" data-limit="60">60 min<small>1 hour</small></button>
-      <button class="limittile" data-limit="120">2 h<small>2 hours</small></button>
-      <button class="limittile" data-limit="240">4 h<small>4 hours</small></button>
+      <button class="limittile" data-limit="15">15 min</button>
+      <button class="limittile" data-limit="60">60 min</button>
+      <button class="limittile" data-limit="120">2 h</button>
+      <button class="limittile" data-limit="240">4 h</button>
     </div>
     <div id="limitRunning" class="hidden">
       <div class="big" id="limitCount" style="margin-top:12px">—</div>
       <div id="limitDetail" style="font-size:17px"></div>
       <div id="limitWarn" class="warnline hidden"></div>
-      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
-        <button class="action primary" id="limitIcsBtn">Add to calendar (.ics)</button>
+      <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="action" id="limitIcsBtn">Add to calendar (.ics)</button>
         <button class="action" id="limitClear">Clear &mdash; I&rsquo;m back</button>
       </div>
-      <div class="note" style="margin-top:10px">One alarm <b id="limitAlarmNote">10 minutes before</b>
-      the limit, so your calendar reminds you in time. This page itself can&rsquo;t remind you
-      while it&rsquo;s closed &mdash; <b>import the file</b> to get the alarm.</div>
     </div>
   </div>
 
+  <div class="card" id="gpsCard">
+    <div id="gpsStatus" style="font-size:17px">Checking location&hellip;</div>
+    <button class="action" id="gpsBtn" style="margin-top:10px">Check my location</button>
+  </div>
+  </div><!-- /mainView -->
+
+  <div id="detailsView" class="hidden">
+  <div class="toprow">
+    <div><h1 style="margin-bottom:0">Details</h1></div>
+    <button class="action" id="backBtn">&larr; Back</button>
+  </div>
+
+  <div class="banner" style="margin-top:10px"><b>Verified on my side.</b> The Mon/Thu 5:30&ndash;6:30 PM cleaning window
+  for my side (1558) was checked against a photo of the physical sign on Nov 16, 2026,
+  and the 7&ndash;8 AM sign at the far end of the block
+  belongs to Chemin de la C&ocirc;te-des-Neiges, not this street. The other side is still
+  unverified, and the full block has not been walked yet. <b>Always check the sign where
+  you park.</b></div>
+
   <h2 style="font-size:20px;margin:18px 0 10px 0">Both sides</h2>
   <div id="sideCards"></div>
+
+  <div class="card">
+    <div class="label">Add to calendar</div>
+    <div style="font-size:17px;margin-top:4px">The calendar file repeats every cleaning day until
+    Dec 1. It sets an alarm <b>1 hour before</b> each cleaning window, so your calendar
+    reminds you in time. The parking-limit file sets one alarm <b>10 minutes before</b>
+    the limit (5 minutes for the 15-minute timer). This page alone can&rsquo;t remind you:
+    <b>import the file</b>, or the warning only exists while this page is open. If the
+    window changes, delete this calendar and export again.</div>
+  </div>
+
+  <div class="card">
+    <div class="label">Location</div>
+    <div style="font-size:17px;margin-top:4px">GPS can&rsquo;t tell the sides apart on this street
+    (the two parking rows are only ~7&nbsp;m apart) — that&rsquo;s why you tap. This confirms the street, not the side. Your choice is saved on this device only.</div>
+  </div>
 
   <div class="card foot">
     <div>Data: City of Montr&eacute;al open data, <a id="srcLink" href="https://donnees.montreal.ca/dataset/stationnement-sur-rue-signalisation-courant">Stationnement sur rue — signalisation courante</a> (CC-BY 4.0), as of <span class="asOf2">—</span>.
@@ -166,7 +183,12 @@
     (FLECHE_PAN) are not decoded in the open data, so no arrow is assumed to mean both directions.
     Centreline: OpenStreetMap contributors (ODbL). Times are America/Toronto.</div>
     <div style="margin-top:8px">Cleaning only. Winter snow removal is separate — infoneige.ca already covers it.</div>
+    <div style="margin-top:8px">Resident permits: the photographed SE sign also carries
+    &ldquo;EXCEPT&Eacute; V&Eacute;HICULES MUNIS D&rsquo;UN PERMIS, SECTEUR 41&rdquo; — that plate
+    exempts the 2-hour limit only, not the cleaning ban; during the cleaning window permit
+    holders must still move the car.</div>
   </div>
+  </div><!-- /detailsView -->
 </div>
 
 <script>
@@ -431,7 +453,7 @@ function renderSideCards() {
         + '<span class="note">' + w.signs.length + ' pole(s) on this side carry this sign ('
         + w.signs.map(function (g) { return Math.round(Math.abs(g.along_track_from_home_block_m)) + " m " +
             (g.along_track_from_home_block_m < 0 ? "NE" : "SW") + " of 1558"; }).join("; ")
-        + '). Data as of ' + esc(DATA.data_as_of) + '.</span></div>';
+        + ').</span></div>';
       if (w.exception) {
         html += '<div class="warnline">Except resident-permit holders (' + esc(w.exception) + '). '
           + 'This is the conservative reading — it applies to you unless you hold a resident permit for this street.</div>';
@@ -485,8 +507,7 @@ function heroState(key, now) {
   if (!s || s.status !== "established") {
     return { mode: "no_window", showIcs: false,
              title: "No verified window",
-             detail: "This side has no verified cleaning window, so there is nothing to count down to. "
-               + "That is not the same as “no restriction” — check the physical sign." };
+             detail: "No verified window — check the physical sign." };
   }
   var w = s.windows[0];
   var nw = nextWindow(w, now);
@@ -529,14 +550,6 @@ function renderHero() {
   el("heroCount").textContent = st.count || "—";
   el("heroDetail").textContent = st.detail || "";
   el("icsBtn").classList.toggle("hidden", !st.showIcs);
-  var ex = el("heroException");
-  if (st.exception) {
-    ex.classList.remove("hidden");
-    ex.textContent = "Except resident-permit holders (" + st.exception + "). Conservative reading: "
-      + "this applies to you unless you hold a resident permit for this street.";
-  } else {
-    ex.classList.add("hidden");
-  }
 }
 
 function renderLimit() {
@@ -549,7 +562,6 @@ function renderLimit() {
   if (!t) { running.classList.add("hidden"); return; }
   running.classList.remove("hidden");
   var st = limitState(t.parkedAt, t.limitMin, Date.now());
-  el("limitAlarmNote").textContent = alarmLeadMin(t.limitMin) + " minutes before";
   el("limitDetail").textContent = "Parked at " + fmtTimeToronto(st.parkedAt) + " · "
     + LIMIT_LABELS[t.limitMin] + " limit · ends " + fmtTimeToronto(st.end) + ".";
   var warn = el("limitWarn");
@@ -568,7 +580,6 @@ function renderLimit() {
 }
 
 function renderAll() {
-  el("asOf").textContent = DATA.data_as_of;
   var a2 = document.querySelectorAll(".asOf2");
   for (var i = 0; i < a2.length; i++) a2[i].textContent = DATA.data_as_of;
   renderSideCards();
@@ -588,14 +599,13 @@ function checkGps() {
     var hp = toXY(pos.coords.latitude, pos.coords.longitude);
     var homeDist = Math.round(Math.sqrt(hp[0] * hp[0] + hp[1] * hp[1]));
     if (s.dist <= 30) {
-      st.textContent = "You are on Avenue des Pins Ouest — near 1558 (about " + homeDist
-        + " m from home, ±" + Math.round(pos.coords.accuracy) + " m). This confirms the street, not the side — tap your side below.";
+      st.textContent = "On des Pins Ouest — near 1558 (about " + homeDist + " m away).";
     } else {
-      st.textContent = "Your GPS puts you " + Math.round(s.dist)
-        + " m from des Pins Ouest — showing your home block (1558) anyway. Tap your side below.";
+      st.textContent = Math.round(s.dist)
+        + " m from des Pins Ouest — showing home block (1558).";
     }
   }, function () {
-    st.textContent = "Location unavailable — showing your home block (1558 des Pins Ouest). Tap your side below.";
+    st.textContent = "Location unavailable — showing home block (1558).";
   }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
 }
 
@@ -629,8 +639,22 @@ function exportLimitIcs() {
   setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 
+/* ---- main / Details view switch (layout only — no logic lives here) ---- */
+function showDetails() {
+  el("mainView").classList.add("hidden");
+  el("detailsView").classList.remove("hidden");
+  if (typeof window !== "undefined" && window.scrollTo) window.scrollTo(0, 0);
+}
+function showMain() {
+  el("detailsView").classList.add("hidden");
+  el("mainView").classList.remove("hidden");
+  if (typeof window !== "undefined" && window.scrollTo) window.scrollTo(0, 0);
+}
+
 function init() {
   renderAll();
+  el("detailsBtn").addEventListener("click", showDetails);
+  el("backBtn").addEventListener("click", showMain);
   el("btnSE").addEventListener("click", function () { setSelectedSide("SE"); });
   el("btnNW").addEventListener("click", function () { setSelectedSide("NW"); });
   el("clearSide").addEventListener("click", function () { setSelectedSide(null); });
@@ -662,7 +686,8 @@ if (typeof window !== "undefined") {
     torontoToUtc: torontoToUtc, tzParts: tzParts, inSeason: inSeason, DATA: DATA,
     limitState: limitState, alarmLeadMin: alarmLeadMin, buildLimitIcs: buildLimitIcs,
     getLimitTimer: getLimitTimer, saveLimitTimer: saveLimitTimer,
-    clearLimitTimer: clearLimitTimer, LIMIT_KEY: LIMIT_KEY, LIMIT_OPTIONS: LIMIT_OPTIONS };
+    clearLimitTimer: clearLimitTimer, LIMIT_KEY: LIMIT_KEY, LIMIT_OPTIONS: LIMIT_OPTIONS,
+    showDetails: showDetails, showMain: showMain };
 }
 </script>
 </body>
