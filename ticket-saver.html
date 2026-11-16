@@ -72,6 +72,16 @@
   .foot a { color: inherit; }
   .linkbtn { background: none; border: 0; padding: 0; font-size: 16px; color: var(--muted);
              text-decoration: underline; cursor: pointer; font-family: inherit; }
+  .limitgrid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+  .limittile { flex: 1 1 40%; background: var(--card); border: 2px solid var(--line);
+             border-radius: 12px; padding: 14px; font-size: 20px; font-weight: 700;
+             color: var(--ink); cursor: pointer; font-family: inherit; line-height: 1.3; }
+  .limittile small { display: block; font-size: 15px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+  .limittile:hover, .limittile:focus-visible { transform: translateY(-2px); border-color: var(--accent);
+             box-shadow: 0 0 0 1px rgba(49,196,141,.35), 0 18px 50px rgba(49,196,141,.35), 0 8px 30px rgba(49,196,141,.25);
+             outline: none; }
+  .limittile.selected { background: var(--soft-green); border-color: var(--accent);
+             box-shadow: inset 2px 0 0 var(--accent); }
   .hidden { display: none; }
 </style>
 </head>
@@ -119,6 +129,30 @@
     <button class="sidebtn" id="btnNW">Across the street — odd numbers<small>North-west side, toward Mount Royal &middot; Droite</small></button>
     <div class="note">GPS can&rsquo;t tell the sides apart on this street (the two parking rows are
     only ~7&nbsp;m apart) — that&rsquo;s why you tap. Your choice is saved on this device only.</div>
+  </div>
+
+  <div class="card" id="limitCard">
+    <div class="label">Parking limit timer</div>
+    <div style="font-size:17px;margin-top:4px">Tap the limit on the sign where you parked &mdash;
+    the timer starts now. This is separate from the cleaning window above.</div>
+    <div class="limitgrid" id="limitTiles">
+      <button class="limittile" data-limit="15">15 min<small>short stop</small></button>
+      <button class="limittile" data-limit="60">60 min<small>1 hour</small></button>
+      <button class="limittile" data-limit="120">2 h<small>2 hours</small></button>
+      <button class="limittile" data-limit="240">4 h<small>4 hours</small></button>
+    </div>
+    <div id="limitRunning" class="hidden">
+      <div class="big" id="limitCount" style="margin-top:12px">—</div>
+      <div id="limitDetail" style="font-size:17px"></div>
+      <div id="limitWarn" class="warnline hidden"></div>
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="action primary" id="limitIcsBtn">Add to calendar (.ics)</button>
+        <button class="action" id="limitClear">Clear &mdash; I&rsquo;m back</button>
+      </div>
+      <div class="note" style="margin-top:10px">One alarm <b id="limitAlarmNote">10 minutes before</b>
+      the limit, so your calendar reminds you in time. This page itself can&rsquo;t remind you
+      while it&rsquo;s closed &mdash; <b>import the file</b> to get the alarm.</div>
+    </div>
   </div>
 
   <h2 style="font-size:20px;margin:18px 0 10px 0">Both sides</h2>
@@ -253,6 +287,15 @@ function icsDateLocal(d) {
   var p = tzParts(d);
   return pad(p.y, 4) + pad(p.mo) + pad(p.d) + "T" + pad(p.h) + pad(p.mi) + "00";
 }
+/* Shared VTIMEZONE block (both .ics exports use it). */
+var VTZ_LINES = [
+  "BEGIN:VTIMEZONE", "TZID:America/Toronto",
+  "BEGIN:DAYLIGHT", "TZOFFSETFROM:-0500", "TZOFFSETTO:-0400", "TZNAME:EDT",
+  "DTSTART:19700308T020000", "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU", "END:DAYLIGHT",
+  "BEGIN:STANDARD", "TZOFFSETFROM:-0400", "TZOFFSETTO:-0500", "TZNAME:EST",
+  "DTSTART:19701101T020000", "RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU", "END:STANDARD",
+  "END:VTIMEZONE"
+];
 function buildIcs(sideKey, win, now) {
   var nw = nextWindow(win, now);
   if (!nw) return null;
@@ -272,13 +315,8 @@ function buildIcs(sideKey, win, now) {
   var uid = "ticket-saver-" + sideKey.toLowerCase() + "-" + icsDateLocal(start) + "@jsm-tools.com";
   var lines = [
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//JSM Tools//Ticket Saver 1.0//EN",
-    "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:Ticket Saver — des Pins Ouest",
-    "BEGIN:VTIMEZONE", "TZID:America/Toronto",
-    "BEGIN:DAYLIGHT", "TZOFFSETFROM:-0500", "TZOFFSETTO:-0400", "TZNAME:EDT",
-    "DTSTART:19700308T020000", "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU", "END:DAYLIGHT",
-    "BEGIN:STANDARD", "TZOFFSETFROM:-0400", "TZOFFSETTO:-0500", "TZNAME:EST",
-    "DTSTART:19701101T020000", "RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU", "END:STANDARD",
-    "END:VTIMEZONE",
+    "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:Ticket Saver — des Pins Ouest"
+  ].concat(VTZ_LINES, [
     "BEGIN:VEVENT", "UID:" + uid, "DTSTAMP:" + stamp,
     "DTSTART;TZID=America/Toronto:" + icsDateLocal(start),
     "DTEND;TZID=America/Toronto:" + icsDateLocal(end),
@@ -292,7 +330,66 @@ function buildIcs(sideKey, win, now) {
     "DESCRIPTION:" + icsEscape("Move the car — street cleaning on the " + sideKey + " side of Avenue des Pins Ouest in 1 hour."),
     "END:VALARM",
     "END:VEVENT", "END:VCALENDAR"
-  ];
+  ]);
+  return lines.map(foldLine).join("\r\n") + "\r\n";
+}
+
+/* ---- parking-limit timer (secondary, opt-in: nothing runs until a tile is tapped) ---- */
+var LIMIT_KEY = "ticketSaver.limit.v1";
+var LIMIT_OPTIONS = [15, 60, 120, 240];   /* minutes */
+var LIMIT_LABELS = { 15: "15 min", 60: "1 hour", 120: "2 hours", 240: "4 hours" };
+/* Alarm lead + warning window: last 10 min, except the 15-min tile (last 5 min). */
+function alarmLeadMin(limitMin) { return limitMin <= 15 ? 5 : 10; }
+/* Pure state: { state: 'counting' | 'warning' | 'expired', end, remainingMs, limitMin, parkedAt } */
+function limitState(parkedAtMs, limitMin, nowMs) {
+  var end = parkedAtMs + limitMin * 60000;
+  var remaining = end - nowMs;
+  var state = remaining <= 0 ? "expired"
+    : (remaining <= alarmLeadMin(limitMin) * 60000 ? "warning" : "counting");
+  return { state: state, end: new Date(end), remainingMs: remaining,
+           limitMin: limitMin, parkedAt: new Date(parkedAtMs) };
+}
+function getLimitTimer() {
+  try {
+    var raw = localStorage.getItem(LIMIT_KEY);
+    if (!raw) return null;
+    var o = JSON.parse(raw);
+    if (!o || typeof o.parkedAt !== "number" || LIMIT_OPTIONS.indexOf(o.limitMin) < 0) return null;
+    return o;
+  } catch (e) { return null; }
+}
+function saveLimitTimer(parkedAtMs, limitMin) {
+  var o = { parkedAt: parkedAtMs, limitMin: limitMin };
+  try { localStorage.setItem(LIMIT_KEY, JSON.stringify(o)); } catch (e) { /* private mode */ }
+  return o;
+}
+function startLimitTimer(limitMin) { return saveLimitTimer(Date.now(), limitMin); }
+function clearLimitTimer() {
+  try { localStorage.removeItem(LIMIT_KEY); } catch (e) { /* private mode */ }
+}
+/* One-off .ics: a single event, parked-at -> parked-at + limit, with one VALARM
+   before expiry. No RRULE — this is a one-time timer, not the recurring cleaning export. */
+function buildLimitIcs(parkedAtMs, limitMin, nowMs) {
+  var start = new Date(parkedAtMs);
+  var end = new Date(parkedAtMs + limitMin * 60000);
+  var lead = alarmLeadMin(limitMin);
+  var stamp = new Date(nowMs).toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+  var uid = "ticket-saver-limit-" + limitMin + "-" + icsDateLocal(start) + "@jsm-tools.com";
+  var lines = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//JSM Tools//Ticket Saver 1.0//EN",
+    "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:Ticket Saver — parking limit"
+  ].concat(VTZ_LINES, [
+    "BEGIN:VEVENT", "UID:" + uid, "DTSTAMP:" + stamp,
+    "DTSTART;TZID=America/Toronto:" + icsDateLocal(start),
+    "DTEND;TZID=America/Toronto:" + icsDateLocal(end),
+    "SUMMARY:Ticket Saver — parking limit ends (" + LIMIT_LABELS[limitMin] + "), des Pins Ouest",
+    "DESCRIPTION:" + icsEscape("Parking limit of " + LIMIT_LABELS[limitMin] + " on Avenue des Pins Ouest ends at "
+      + fmtTimeToronto(end) + ". Move the car before then. One-time event from the Ticket Saver parking limit timer."),
+    "BEGIN:VALARM", "TRIGGER:-PT" + lead + "M", "ACTION:DISPLAY",
+    "DESCRIPTION:" + icsEscape("Move the car — your " + LIMIT_LABELS[limitMin] + " parking limit on des Pins Ouest ends in " + lead + " minutes."),
+    "END:VALARM",
+    "END:VEVENT", "END:VCALENDAR"
+  ]);
   return lines.map(foldLine).join("\r\n") + "\r\n";
 }
 
@@ -442,12 +539,41 @@ function renderHero() {
   }
 }
 
+function renderLimit() {
+  var t = getLimitTimer();
+  var tiles = document.querySelectorAll("#limitTiles .limittile");
+  for (var i = 0; i < tiles.length; i++) {
+    tiles[i].classList.toggle("selected", !!t && +tiles[i].getAttribute("data-limit") === t.limitMin);
+  }
+  var running = el("limitRunning");
+  if (!t) { running.classList.add("hidden"); return; }
+  running.classList.remove("hidden");
+  var st = limitState(t.parkedAt, t.limitMin, Date.now());
+  el("limitAlarmNote").textContent = alarmLeadMin(t.limitMin) + " minutes before";
+  el("limitDetail").textContent = "Parked at " + fmtTimeToronto(st.parkedAt) + " · "
+    + LIMIT_LABELS[t.limitMin] + " limit · ends " + fmtTimeToronto(st.end) + ".";
+  var warn = el("limitWarn");
+  if (st.state === "expired") {
+    el("limitCount").textContent = "Limit reached";
+    warn.classList.remove("hidden");
+    warn.textContent = "Limit reached — move the car.";
+  } else if (st.state === "warning") {
+    el("limitCount").textContent = fmtCountdown(st.remainingMs) + " left";
+    warn.classList.remove("hidden");
+    warn.textContent = "Almost out of time — move soon.";
+  } else {
+    el("limitCount").textContent = fmtCountdown(st.remainingMs) + " left";
+    warn.classList.add("hidden");
+  }
+}
+
 function renderAll() {
   el("asOf").textContent = DATA.data_as_of;
   var a2 = document.querySelectorAll(".asOf2");
   for (var i = 0; i < a2.length; i++) a2[i].textContent = DATA.data_as_of;
   renderSideCards();
   renderHero();
+  renderLimit();
 }
 
 function checkGps() {
@@ -489,6 +615,20 @@ function exportIcs() {
   setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 
+function exportLimitIcs() {
+  var t = getLimitTimer();
+  if (!t) return;
+  var ics = buildLimitIcs(t.parkedAt, t.limitMin, Date.now());
+  if (!ics) return;
+  var blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "ticket-saver-parking-limit-" + t.limitMin + "min.ics";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
 function init() {
   renderAll();
   el("btnSE").addEventListener("click", function () { setSelectedSide("SE"); });
@@ -496,8 +636,20 @@ function init() {
   el("clearSide").addEventListener("click", function () { setSelectedSide(null); });
   el("icsBtn").addEventListener("click", exportIcs);
   el("gpsBtn").addEventListener("click", checkGps);
+  var tiles = document.querySelectorAll("#limitTiles .limittile");
+  for (var i = 0; i < tiles.length; i++) {
+    tiles[i].addEventListener("click", function () {
+      startLimitTimer(+this.getAttribute("data-limit"));
+      renderLimit();
+    });
+  }
+  el("limitClear").addEventListener("click", function () { clearLimitTimer(); renderLimit(); });
+  el("limitIcsBtn").addEventListener("click", exportLimitIcs);
   checkGps();
-  setInterval(renderHero, 30000);
+  setInterval(function () {
+    renderHero();
+    try { renderLimit(); } catch (e) { /* a timer fault must never swallow the hero tick */ }
+  }, 30000);
 }
 
 if (typeof document !== "undefined" && document.addEventListener) {
@@ -507,7 +659,10 @@ if (typeof document !== "undefined" && document.addEventListener) {
 if (typeof window !== "undefined") {
   window.__ticketSaver = { nextWindow: nextWindow, buildIcs: buildIcs,
     fmtCountdown: fmtCountdown, windowHeadline: windowHeadline, heroState: heroState,
-    torontoToUtc: torontoToUtc, tzParts: tzParts, inSeason: inSeason, DATA: DATA };
+    torontoToUtc: torontoToUtc, tzParts: tzParts, inSeason: inSeason, DATA: DATA,
+    limitState: limitState, alarmLeadMin: alarmLeadMin, buildLimitIcs: buildLimitIcs,
+    getLimitTimer: getLimitTimer, saveLimitTimer: saveLimitTimer,
+    clearLimitTimer: clearLimitTimer, LIMIT_KEY: LIMIT_KEY, LIMIT_OPTIONS: LIMIT_OPTIONS };
 }
 </script>
 </body>
