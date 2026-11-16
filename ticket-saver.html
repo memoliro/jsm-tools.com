@@ -39,6 +39,9 @@
   .label { color: var(--muted); font-size: 16px; }
   .big { font-size: 34px; font-weight: 800; line-height: 1.15; }
   .count { font-size: 44px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  /* Next (future) window only: a normal readable size. The big 44px count
+     stays for the urgent now-mode, where big type earns its place. */
+  #heroCard.next .big, #heroCard.next .count { font-size: 26px; }
   .now { background: var(--now-bg); border-color: #f3c98f; }
   .now .count, .now .big { color: var(--now-ink); }
   .sidebtn { display: block; width: 100%; text-align: left; background: var(--card);
@@ -283,10 +286,35 @@ function fmtDateToronto(d) {
   var p = tzParts(d);
   return DAY_NAMES[p.wd] + ", " + MONTH_SHORT[p.mo - 1] + " " + p.d;
 }
+/* Short forms, next-mode hero only: "Thu Nov 19" (no full weekday name). */
+function fmtDateShortToronto(d) {
+  var p = tzParts(d);
+  return DAY_SHORT[p.wd] + " " + MONTH_SHORT[p.mo - 1] + " " + p.d;
+}
+/* "5:30–6:30 PM" — the shared AM/PM is stated once; when the window spans
+   noon/midnight both are stated ("11:30 AM–12:30 PM"). */
+function fmtTimeRangeShort(start, end) {
+  function f(d) {
+    var p = tzParts(d);
+    return { t: (p.h % 12 || 12) + ":" + (p.mi < 10 ? "0" : "") + p.mi,
+             ap: p.h >= 12 ? "PM" : "AM" };
+  }
+  var a = f(start), b = f(end);
+  return a.ap === b.ap ? a.t + "–" + b.t + " " + a.ap : a.t + " " + a.ap + "–" + b.t + " " + b.ap;
+}
 function fmtCountdown(ms) {
   var mins = Math.max(0, Math.round(ms / 60000));
   var days = Math.floor(mins / 1440), h = Math.floor((mins % 1440) / 60), m = mins % 60;
   if (days > 0) return days + (days === 1 ? " day, " : " days, ") + h + " h, " + m + " min";
+  if (h > 0) return h + " h, " + m + " min";
+  return m + " min";
+}
+/* Short countdown, next-mode hero only: minutes are dropped once days remain
+   ("2 days, 22 h"); under a day the minutes still matter and stay. */
+function fmtCountdownShort(ms) {
+  var mins = Math.max(0, Math.round(ms / 60000));
+  var days = Math.floor(mins / 1440), h = Math.floor((mins % 1440) / 60), m = mins % 60;
+  if (days > 0) return days + (days === 1 ? " day, " : " days, ") + h + " h";
   if (h > 0) return h + " h, " + m + " min";
   return m + " min";
 }
@@ -539,8 +567,8 @@ function heroState(key, now) {
              exception: w.exception || null };
   }
   return { mode: "next", showIcs: true,
-           title: fmtDateToronto(nw.start) + " — " + fmtTimeToronto(nw.start) + "–" + fmtTimeToronto(nw.end),
-           count: "in " + fmtCountdown(nw.start - now),
+           title: fmtDateShortToronto(nw.start) + " · " + fmtTimeRangeShort(nw.start, nw.end),
+           count: "in " + fmtCountdownShort(nw.start - now),
            detail: "",
            exception: w.exception || null };
 }
@@ -556,6 +584,7 @@ function renderHero() {
   var st = heroState(key, new Date());
   hero.classList.remove("hidden");
   hero.classList.toggle("now", st.mode === "now");
+  hero.classList.toggle("next", st.mode === "next");
   el("heroTitle").textContent = st.title || "—";
   el("heroCount").textContent = st.count || "—";
   el("heroDetail").textContent = st.detail || "";
@@ -783,7 +812,9 @@ if (typeof document !== "undefined" && document.addEventListener) {
 /* Test hook (also handy in the console): pure date/.ics logic. */
 if (typeof window !== "undefined") {
   window.__ticketSaver = { nextWindow: nextWindow, buildIcs: buildIcs,
-    fmtCountdown: fmtCountdown, windowHeadline: windowHeadline, heroState: heroState,
+    fmtCountdown: fmtCountdown, fmtCountdownShort: fmtCountdownShort,
+    fmtDateShortToronto: fmtDateShortToronto, fmtTimeRangeShort: fmtTimeRangeShort,
+    windowHeadline: windowHeadline, heroState: heroState,
     torontoToUtc: torontoToUtc, tzParts: tzParts, inSeason: inSeason, DATA: DATA,
     limitState: limitState, alarmLeadMin: alarmLeadMin, buildLimitIcs: buildLimitIcs,
     getLimitTimer: getLimitTimer, saveLimitTimer: saveLimitTimer,
