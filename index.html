@@ -16,6 +16,8 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Free Tools That Never Upload Your Files — JSM Tools">
 <meta name="twitter:description" content="Resize images, convert video, measure loudness, format lyrics and more — free in your browser. No uploads, no account — your files never leave your device.">
+<meta property="og:image" content="https://jsm-tools.com/assets/shot-image.jpg">
+<meta property="og:image:alt" content="JSM Image — the actual tool, with a before and after photo slider">
 <link rel="stylesheet" href="styles.css?v=20261024a">
 <style>
 .content-page{max-width:800px;margin:0 auto;padding:28px 20px 60px}
@@ -35,6 +37,80 @@ body.dark-mode .content-page a{color:#93c5fd}
 .hub-verified{text-align:center;color:var(--muted);font-size:13px;line-height:1.6;margin:0 0 8px}
 .group-note{text-align:center;color:var(--muted);font-size:13px;line-height:1.6;max-width:640px;margin:-14px auto 0}
 .header-main .logo a{text-decoration:none;color:inherit}
+/* ===== Hub v2 enrichment (Nov 16): D1, D2, Radio hover, sliders, demos ===== */
+/* D1: card descriptions 13px (was 12px) */
+.tool-card .tool-desc{font-size:13px}
+/* D2: deepen light-theme nav pills (near-white on white before) */
+body:not(.dark-mode) .header-actions nav a{background:#e9eef5;border-color:#c3cedb}
+/* Radio hover everywhere: lift + green border + green glow */
+.tool-card:hover{transform:translateY(-2px);border-color:#31c48d;box-shadow:0 0 0 1px rgba(49,196,141,.35),0 18px 50px rgba(49,196,141,.35),0 8px 30px rgba(49,196,141,.25)}
+.header-actions nav a:hover{border-color:#31c48d;box-shadow:0 0 0 1px rgba(49,196,141,.35),0 8px 24px rgba(49,196,141,.25)}
+.section-preview a:hover img{border-color:#31c48d;box-shadow:0 0 0 1px rgba(49,196,141,.35),0 18px 50px rgba(49,196,141,.35),0 8px 30px rgba(49,196,141,.25)}
+/* Unified active highlight for demo presets (accent-soft bg + inset bar) */
+.demo-preset.active{background:#dbeafe;border-color:#2563eb;color:#1d4ed8;box-shadow:inset 2px 0 0 #2563eb}
+body.dark-mode .demo-preset.active{background:#1e3a5f;color:#bfdbfe;border-color:#60a5fa;box-shadow:inset 2px 0 0 #60a5fa}
+/* Hero proof slider — standing drag-slider rule: tags centred in their visible
+   side, fade out below ~20%, Before = the true original file bytes */
+.hero-proof{margin:22px auto 0}
+.ba-wrap{position:relative;width:100%;aspect-ratio:1280/853;border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:var(--shadow);--pos:50%;user-select:none;touch-action:pan-y}
+.ba-wrap img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.ba-before{position:absolute;inset:0;clip-path:inset(0 calc(100% - var(--pos)) 0 0)}
+.ba-tag{position:absolute;top:12px;transform:translateX(-50%);background:rgba(15,23,42,.78);color:#fff;font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px;white-space:nowrap;transition:opacity .2s;pointer-events:none;z-index:3}
+.ba-tag-before{left:calc(var(--pos)/2)}
+.ba-tag-after{left:calc((var(--pos) + 100%)/2)}
+.ba-handle{position:absolute;top:0;bottom:0;left:var(--pos);width:2px;background:#fff;transform:translateX(-50%);box-shadow:0 0 0 1px rgba(0,0,0,.25);z-index:2;pointer-events:none}
+.ba-handle span{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:38px;height:38px;border-radius:50%;background:#fff;color:#1d2433;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.ba-range{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:ew-resize;margin:0;z-index:4;-webkit-appearance:none;appearance:none}
+.ba-range:focus-visible{opacity:0;outline:2px solid #31c48d;outline-offset:2px}
+.hero-proof figcaption{color:var(--muted);font-size:13px;line-height:1.6;margin-top:10px;text-align:center}
+/* Section previews — genuine screenshots of the actual tool UIs */
+.section-preview{max-width:860px;margin:0 auto 22px}
+.section-preview a{display:block;border-radius:14px;overflow:hidden}
+.section-preview img{display:block;width:100%;height:auto;border:1px solid var(--border);border-radius:14px;transition:transform .15s,border-color .15s,box-shadow .15s}
+.section-preview a:hover img{transform:translateY(-2px)}
+.section-preview figcaption{text-align:center;color:var(--muted);font-size:13px;margin-top:8px}
+/* Demo panels */
+.demo-panel{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:22px;max-width:860px;margin:0 auto 8px}
+.demo-panel h3{font-size:17px;margin:0 0 6px;color:var(--text)}
+.demo-note{color:var(--muted);font-size:13px;line-height:1.6;margin:10px 0 0}
+.demo-note a{color:#2563eb}
+body.dark-mode .demo-note a{color:#93c5fd}
+.demo-band{max-width:1000px;margin:36px auto;padding:0 20px}
+.demo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:20px}
+.demo-card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:20px;display:flex;flex-direction:column;gap:10px}
+.demo-card h3{font-size:16px;margin:0;color:var(--text)}
+.demo-card p{color:var(--muted);font-size:13px;line-height:1.6;margin:0}
+.demo-drop{border:2px dashed #52637c;border-radius:12px;padding:16px;text-align:center;cursor:pointer;color:var(--text);background:var(--soft);font-size:14px}
+.demo-drop:hover,.demo-drop.dragover{border-color:#31c48d}
+.demo-drop input{display:none}
+.demo-btn{border:1px solid var(--border);background:var(--soft);color:var(--text);border-radius:9px;padding:9px 14px;cursor:pointer;font:inherit;font-size:13px;font-weight:700;transition:.15s;text-decoration:none;display:inline-block;text-align:center}
+.demo-btn:hover{border-color:#31c48d;box-shadow:0 0 0 1px rgba(49,196,141,.35),0 8px 24px rgba(49,196,141,.25);transform:translateY(-1px)}
+.demo-btn.primary{background:#16a34a;border-color:#16a34a;color:#fff}
+.demo-btn.primary:hover{background:#15803d;border-color:#15803d;filter:brightness(1.08)}
+.demo-stats{font-size:14px;line-height:1.7;color:var(--text);background:var(--soft);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:0}
+.demo-presets{display:flex;gap:8px;flex-wrap:wrap}
+.demo-preset{border:1px solid var(--border);background:var(--soft);color:var(--text);border-radius:8px;padding:8px 12px;cursor:pointer;font:inherit;font-size:13px;font-weight:700}
+.demo-preset:hover{border-color:#31c48d}
+.demo-range{width:100%;accent-color:#2563eb}
+.demo-field{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:700;color:var(--text)}
+.demo-field-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.demo-field input,.demo-textarea{width:100%;padding:10px;border:1px solid var(--border);border-radius:9px;font-size:14px;font-family:inherit;background:var(--soft);color:var(--text);box-sizing:border-box}
+.demo-textarea{min-height:110px;resize:vertical;line-height:1.5}
+.demo-output{white-space:pre-wrap;word-break:break-word;background:var(--soft);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:13px;line-height:1.6;color:var(--text);margin:0;max-height:220px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace}
+.demo-canvas{width:100%;height:auto;display:block;border:1px solid var(--border);border-radius:10px;background:var(--soft)}
+.demo-video{width:100%;max-width:480px;height:auto;display:block;border-radius:12px;border:1px solid var(--border);margin:0 auto}
+.demo-img{width:100%;height:auto;display:block;border-radius:12px;border:1px solid var(--border)}
+.demo-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.demo-row .demo-field{flex:1;min-width:110px}
+.bytes-num{font-size:44px;font-weight:800;color:#16a34a;line-height:1;text-align:center}
+.bytes-num small{font-size:16px;font-weight:700;color:var(--muted)}
+.bytes-label{text-align:center;font-size:13px;color:var(--muted);line-height:1.5}
+.journey{display:block;width:100%;max-width:640px;height:auto;margin:6px auto 14px}
+/* P7: the Enhance AI note gets real presence (same size as card text) */
+.group-note{max-width:640px;margin:-6px auto 0;background:var(--soft);border:1px solid var(--border);border-radius:10px;padding:12px 16px;color:var(--text);font-size:13px;line-height:1.6;text-align:center}
+/* Support: room for a second button (Ko-Fi, URL owed) */
+.support-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:6px}
+@media(max-width:600px){.hero-proof{margin-top:16px}.demo-panel{padding:16px}.bytes-num{font-size:36px}}
 </style>
 
 <script type="application/ld+json">
@@ -128,11 +204,30 @@ body.dark-mode .content-page a{color:#93c5fd}
     <span class="hub-badge"><span class="tick">✓</span> No Account</span>
   </div>
   <p class="hub-verified">Verified for every tool below — each one was checked for upload endpoints before it was listed.</p>
+  <figure class="hero-proof" aria-label="Before and after: the same photo, original and compressed in your browser">
+    <div class="ba-wrap" data-ba style="--pos:50%">
+      <img src="/assets/demo-compressed.jpg" alt="Same market photo compressed in your browser — 227 KB" width="1280" height="853">
+      <div class="ba-before">
+        <img src="/assets/demo-original.jpg" alt="Original market photo — 269 KB" width="1280" height="853">
+      </div>
+      <span class="ba-tag ba-tag-before">Original · 269 KB</span>
+      <span class="ba-tag ba-tag-after">Compressed · 227 KB</span>
+      <div class="ba-handle" aria-hidden="true"><span>↔</span></div>
+      <input class="ba-range" type="range" min="0" max="100" value="50" step="0.1" aria-label="Drag to compare the original and compressed photo">
+    </div>
+    <figcaption>Drag the handle — left is the original photo (269 KB), right is the same photo compressed in your browser (227 KB, 15% smaller). This is JSM Image's own demo photo. Nothing was uploaded to make this comparison.</figcaption>
+  </figure>
 </section>
 
 <section class="tools-grid-section" id="images" aria-label="Image tools">
   <h2 class="section-title">Images — JSM Image</h2>
   <p class="section-subtitle">Resize, convert and protect your photos, right in your browser.</p>
+  <figure class="section-preview">
+    <a href="https://jsm-image.com/" target="_blank" rel="noopener">
+      <img src="/assets/shot-image.jpg" alt="JSM Image — the actual tool: resize and convert images in your browser, with a before and after photo slider" loading="lazy" width="960" height="645">
+    </a>
+    <figcaption>The actual JSM Image tool — screenshot of the live page.</figcaption>
+  </figure>
   <div class="tools-grid">
     <a class="tool-card" href="https://jsm-image.com/"><span class="tool-emoji">🖼️</span><strong>Resize &amp; Convert</strong><span class="tool-desc">Resize, crop &amp; convert images</span></a>
     <a class="tool-card" href="https://jsm-image.com/batch-resize"><span class="tool-emoji">📦</span><strong>Batch Resize</strong><span class="tool-desc">Resize many images, download as ZIP</span></a>
@@ -147,28 +242,58 @@ body.dark-mode .content-page a{color:#93c5fd}
 <section class="tools-grid-section" id="video" aria-label="Video tools">
   <h2 class="section-title">Video — JSM Video</h2>
   <p class="section-subtitle">Convert and edit video with FFmpeg running in your browser.</p>
+  <figure class="section-preview">
+    <a href="https://jsm-video.com/" target="_blank" rel="noopener">
+      <img src="/assets/shot-video.jpg" alt="JSM Video — the actual tool: free online video converter with drop zones for video and audio files" loading="lazy" width="960" height="645">
+    </a>
+    <figcaption>The actual JSM Video tool — screenshot of the live page.</figcaption>
+  </figure>
   <div class="tools-grid">
     <a class="tool-card" href="https://jsm-video.com/"><span class="tool-emoji">🎬</span><strong>Video Converter</strong><span class="tool-desc">Convert video &amp; audio with FFmpeg</span></a>
     <a class="tool-card" href="https://jsm-video.com/#trim"><span class="tool-emoji">✂️</span><strong>Video Trimmer</strong><span class="tool-desc">Cut video clips to length</span></a>
     <a class="tool-card" href="https://jsm-video.com/#bleep"><span class="tool-emoji">🔇</span><strong>Bleep Censor</strong><span class="tool-desc">Mute words &amp; sounds in video</span></a>
     <a class="tool-card" href="https://jsm-video.com/subtitle/"><span class="tool-emoji">💬</span><strong>Subtitle Tool</strong><span class="tool-desc">Edit SRT &amp; VTT subtitles</span></a>
   </div>
+  <div class="demo-panel">
+    <h3>See it move — JSM Video's own test clip</h3>
+    <video class="demo-video" src="/assets/demo-clip.mp4" muted loop autoplay playsinline controls width="320" height="240"></video>
+    <p class="demo-note">JSM Video's own test clip (10 seconds, 320×240) — the same file the tool's test suite uses. Convert, trim or bleep a clip like this at <a href="https://jsm-video.com/" target="_blank" rel="noopener">jsm-video.com</a>.</p>
+  </div>
 </section>
 
 <section class="tools-grid-section" id="audio" aria-label="Audio tools">
   <h2 class="section-title">Audio — JSM Loudness</h2>
   <p class="section-subtitle">Measure and edit audio on your own device.</p>
+  <figure class="section-preview">
+    <a href="https://jsm-loudness.com/" target="_blank" rel="noopener">
+      <img src="/assets/shot-audio.jpg" alt="JSM Loudness — the actual tool: free LUFS loudness meter with a live gauge and platform targets" loading="lazy" width="960" height="645">
+    </a>
+    <figcaption>The actual JSM Loudness tool — screenshot of the live page.</figcaption>
+  </figure>
   <div class="tools-grid">
     <a class="tool-card" href="https://jsm-loudness.com/"><span class="tool-emoji">📊</span><strong>LUFS Loudness Meter</strong><span class="tool-desc">Measure loudness (EBU R128)</span></a>
     <a class="tool-card" href="https://jsm-loudness.com/stem-splitter"><span class="tool-emoji">🎚️</span><strong>Stem Splitter</strong><span class="tool-desc">Split vocals, drums, bass &amp; more</span></a>
     <a class="tool-card" href="https://jsm-loudness.com/trim-audio"><span class="tool-emoji">🎵</span><strong>Trim Audio</strong><span class="tool-desc">Trim, split, join &amp; convert audio</span></a>
     <a class="tool-card" href="https://jsm-loudness.com/bleep-audio"><span class="tool-emoji">🔇</span><strong>Bleep Audio</strong><span class="tool-desc">Mute words in audio files</span></a>
   </div>
+  <div class="demo-panel">
+    <h3>Try the loudness look — drop an audio file</h3>
+    <p class="demo-note" style="margin-top:0">Your file is decoded in this page only — it never leaves your device. The full meter (Integrated LUFS, True Peak, LRA) is at <a href="https://jsm-loudness.com/" target="_blank" rel="noopener">jsm-loudness.com</a>.</p>
+    <label class="demo-drop" id="audioDrop">Drop an audio file here, or click to choose one<input type="file" id="audioFile" accept="audio/*"></label>
+    <canvas class="demo-canvas" id="waveCanvas" width="900" height="160" hidden></canvas>
+    <p class="demo-stats" id="audioStats" hidden></p>
+  </div>
 </section>
 
 <section class="tools-grid-section" id="photos" aria-label="In-browser photo tools">
   <h2 class="section-title">Photos, in your browser — JSM Enhance</h2>
   <p class="section-subtitle">Four free photo tools that run entirely in your browser.</p>
+  <figure class="section-preview">
+    <a href="https://jsm-enhance.com/" target="_blank" rel="noopener">
+      <img src="/assets/shot-photos.jpg" alt="JSM Enhance — the actual tool: AI photo enhancer with Extend, Sharpen, Unblur and Remove tabs and before and after examples" loading="lazy" width="960" height="645">
+    </a>
+    <figcaption>The actual JSM Enhance tool — screenshot of the live page.</figcaption>
+  </figure>
   <div class="tools-grid">
     <a class="tool-card" href="https://jsm-enhance.com/?tool=autofix"><span class="tool-emoji">✨</span><strong>AutoFix</strong><span class="tool-desc">One-click photo fix</span></a>
     <a class="tool-card" href="https://jsm-enhance.com/?tool=adjust"><span class="tool-emoji">🎛️</span><strong>Adjust</strong><span class="tool-desc">Brightness, contrast &amp; colour</span></a>
@@ -176,35 +301,127 @@ body.dark-mode .content-page a{color:#93c5fd}
     <a class="tool-card" href="https://jsm-enhance.com/?tool=text"><span class="tool-emoji">🔤</span><strong>Add Text</strong><span class="tool-desc">Add text layers to images</span></a>
   </div>
   <p class="group-note">Enhance's AI tools — Extend, Sharpen, Unblur and Remove — are not listed here: they upload your image to a server for AI processing.</p>
+  <div class="demo-panel" style="margin-top:18px">
+    <h3>Try Adjust — right here</h3>
+    <img class="demo-img" id="adjustImg" src="/assets/demo-original.jpg" alt="Demo photo for the Adjust demo — the same market photo JSM Image uses">
+    <div style="display:grid;gap:12px;margin-top:14px">
+      <label class="demo-field"><span class="demo-field-head">Brightness <span id="brightVal">100%</span></span><input class="demo-range" type="range" id="brightRange" min="0" max="200" value="100"></label>
+      <label class="demo-field"><span class="demo-field-head">Contrast <span id="contrastVal">100%</span></span><input class="demo-range" type="range" id="contrastRange" min="0" max="200" value="100"></label>
+      <label class="demo-field"><span class="demo-field-head">Saturation <span id="satVal">100%</span></span><input class="demo-range" type="range" id="satRange" min="0" max="200" value="100"></label>
+    </div>
+    <div class="demo-row" style="margin-top:12px"><button class="demo-btn" type="button" id="adjustReset">Reset</button></div>
+    <p class="demo-note">The sliders change the preview only — the original file is untouched. The full Adjust tool is at <a href="https://jsm-enhance.com/?tool=adjust" target="_blank" rel="noopener">jsm-enhance.com</a>.</p>
+  </div>
 </section>
 
 <section class="tools-grid-section" id="options" aria-label="Options tools">
   <h2 class="section-title">Options — no files involved</h2>
   <p class="section-subtitle">Calculators over market data — these never touch your files at all.</p>
+  <figure class="section-preview">
+    <a href="https://jsm-options.com/builder/" target="_blank" rel="noopener">
+      <img src="/assets/shot-options.jpg" alt="JSM Options Strategy Builder — the actual tool: strategy template picker, options chain and payoff chart" loading="lazy" width="960" height="645">
+    </a>
+    <figcaption>The actual JSM Options Strategy Builder — screenshot of the live page.</figcaption>
+  </figure>
   <div class="tools-grid">
     <a class="tool-card" href="https://jsm-options.com/builder/"><span class="tool-emoji">📈</span><strong>Strategy Builder</strong><span class="tool-desc">Build options strategies in your browser</span></a>
     <a class="tool-card" href="https://jsm-options.com/backtest/"><span class="tool-emoji">📉</span><strong>Backtester</strong><span class="tool-desc">Backtest a strategy on history</span></a>
+  </div>
+  <div class="demo-panel">
+    <h3>Try it — long call payoff</h3>
+    <div class="demo-row">
+      <label class="demo-field">Strike ($) <input type="number" id="optStrike" value="100" min="1" step="1"></label>
+      <label class="demo-field">Premium ($) <input type="number" id="optPrem" value="5" min="0" step="0.5"></label>
+      <label class="demo-field">Contracts <input type="number" id="optQty" value="1" min="1" step="1"></label>
+    </div>
+    <canvas class="demo-canvas" id="payoffCanvas" width="900" height="320" style="margin-top:12px"></canvas>
+    <p class="demo-stats" id="payoffStats" style="margin-top:12px"></p>
+    <p class="demo-note">Educational example — not financial advice. One contract = 100 shares; green is profit, red is loss. The full Strategy Builder is at <a href="https://jsm-options.com/builder/" target="_blank" rel="noopener">jsm-options.com</a>.</p>
   </div>
 </section>
 
 <section class="tools-grid-section" id="lyrics" aria-label="Lyrics tool">
   <h2 class="section-title">Lyrics — text, not files</h2>
   <p class="section-subtitle">Paste your lyrics — nothing is sent anywhere.</p>
+  <figure class="section-preview">
+    <a href="https://lyricprep.com/" target="_blank" rel="noopener">
+      <img src="/assets/shot-lyrics.jpg" alt="LyricPrep — the actual tool: clean lyrics button, formatting options and raw input and clean output panes" loading="lazy" width="960" height="398">
+    </a>
+    <figcaption>The actual LyricPrep tool — screenshot of the live page.</figcaption>
+  </figure>
   <div class="tools-grid">
     <a class="tool-card" href="https://lyricprep.com/"><span class="tool-emoji">🎤</span><strong>LyricPrep</strong><span class="tool-desc">Format lyrics for Suno &amp; Udio</span></a>
   </div>
+  <div class="demo-panel">
+    <h3>What clean lyrics look like</h3>
+    <pre class="demo-output">[Verse]
+Walking down the old road, dust on my shoes
+Singing to the morning, nothing left to lose
+
+[Chorus]
+Hold on to the sunlight, hold on to the sound
+We are going home now, feet back on the ground</pre>
+    <p class="demo-note">Sample output from LyricPrep's formatter (original lines, written for this demo). Try the live formatter in “Try it right here” below — the full tool is at <a href="https://lyricprep.com/" target="_blank" rel="noopener">lyricprep.com</a>.</p>
+  </div>
+</section>
+
+<section class="demo-band" id="try-it" aria-label="Try it right here">
+  <h2 class="section-title">How it works — try it right here</h2>
+  <p class="section-subtitle">Pick a tool, it runs in your browser, download the result — nothing is uploaded, and there is no queue. Three small demos, all running in this page:</p>
+  <div class="demo-grid">
+    <div class="demo-card" id="compressDemo">
+      <h3>🗜️ Compress an image</h3>
+      <p>Drop an image, pick a quality, watch the size drop — the compression happens in this page.</p>
+      <label class="demo-drop" id="compressDrop">Drop an image here, or click to choose one<input type="file" id="compressFile" accept="image/*"></label>
+      <div class="demo-presets" role="group" aria-label="Quality presets">
+        <button class="demo-preset" type="button" data-q="50">Small · 50</button>
+        <button class="demo-preset active" type="button" data-q="70">Balanced · 70</button>
+        <button class="demo-preset" type="button" data-q="90">Best · 90</button>
+      </div>
+      <label class="demo-field"><span class="demo-field-head">Quality <span id="qualityVal">70</span></span><input class="demo-range" type="range" id="qualityRange" min="10" max="100" value="70"></label>
+      <p class="demo-stats" id="compressStats">Demo photo loaded: Original 269 KB → Compressed 227 KB (−15%). Output is JPEG.</p>
+      <a class="demo-btn primary" id="compressDownload" href="/assets/demo-compressed.jpg" download="demo-compressed.jpg" style="display:none">Download compressed</a>
+    </div>
+    <div class="demo-card" id="lyricsDemo">
+      <h3>🎤 Format lyrics</h3>
+      <p>Paste messy lyrics — chord lines, mixed-up tags, extra blank lines — and get the clean version.</p>
+      <textarea class="demo-textarea" id="lyricsInput" placeholder="Paste lyrics here… try:&#10;verse&#10;G   C   D&#10;walking down the old road"></textarea>
+      <div class="demo-row">
+        <button class="demo-btn" type="button" id="lyricsExample">Load example</button>
+        <button class="demo-btn primary" type="button" id="lyricsFormat">Format lyrics</button>
+        <button class="demo-btn" type="button" id="lyricsCopy">Copy result</button>
+      </div>
+      <pre class="demo-output" id="lyricsOutput">Cleaned lyrics will appear here…</pre>
+      <p class="demo-stats" id="lyricsStats">Nothing formatted yet.</p>
+    </div>
+    <div class="demo-card" id="bytesDemo">
+      <h3>📡 Bytes uploaded</h3>
+      <p>Every demo on this page runs in your browser. This counter measures, live, the bytes this page actually sends to any server while you use it.</p>
+      <div class="bytes-num"><span id="bytesUp">0</span> <small>bytes</small></div>
+      <p class="bytes-label">uploaded while you used this page</p>
+      <p>Try the demos on this page — the number stays at 0. Your browser's Network tab shows the same thing: page loads are downloads, not uploads.</p>
+    </div>
+  </div>
+  <p class="demo-note" style="text-align:center">Video conversion runs on FFmpeg WASM, in your browser.</p>
 </section>
 
 <div class="content-page">
-  <h2>How it works</h2>
-  <ol>
-    <li><strong>Pick a tool.</strong> Choose what you need from the list above — image, video, audio, lyrics or options.</li>
-    <li><strong>Your file opens in your browser.</strong> It is read and processed on your own device. Nothing is uploaded, and there is no queue.</li>
-    <li><strong>Download the result.</strong> Save the finished file to your device. Close the tab and it is gone from the tool — nothing was ever stored anywhere else.</li>
-  </ol>
-  <p>Video conversion runs on FFmpeg WASM, in your browser.</p>
-
   <h2>What never happens to your files</h2>
+  <svg class="journey" viewBox="0 0 640 142" role="img" aria-label="Your file's journey: your device, to browser memory, to download. No server involved.">
+    <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#64748b"/></marker></defs>
+    <rect x="10" y="35" width="150" height="60" rx="12" fill="#fff" stroke="#e2e8f0"/>
+    <text x="85" y="60" text-anchor="middle" font-size="14" font-weight="bold" fill="#1d2433">Your device</text>
+    <text x="85" y="80" text-anchor="middle" font-size="12" fill="#64748b">your file starts here</text>
+    <line x1="160" y1="65" x2="225" y2="65" stroke="#64748b" stroke-width="2" marker-end="url(#arr)"/>
+    <rect x="225" y="35" width="150" height="60" rx="12" fill="#f0fdf4" stroke="#16a34a"/>
+    <text x="300" y="60" text-anchor="middle" font-size="14" font-weight="bold" fill="#1d2433">Browser memory</text>
+    <text x="300" y="80" text-anchor="middle" font-size="12" fill="#64748b">processed, never sent</text>
+    <line x1="375" y1="65" x2="440" y2="65" stroke="#64748b" stroke-width="2" marker-end="url(#arr)"/>
+    <rect x="440" y="35" width="150" height="60" rx="12" fill="#fff" stroke="#e2e8f0"/>
+    <text x="515" y="60" text-anchor="middle" font-size="14" font-weight="bold" fill="#1d2433">Download</text>
+    <text x="515" y="80" text-anchor="middle" font-size="12" fill="#64748b">result saved to you</text>
+    <g transform="translate(270 120)"><circle cx="0" cy="0" r="11" fill="#fff" stroke="#dc2626" stroke-width="2"/><line x1="-6" y1="-6" x2="6" y2="6" stroke="#dc2626" stroke-width="2"/><line x1="6" y1="-6" x2="-6" y2="6" stroke="#dc2626" stroke-width="2"/><text x="16" y="4" font-size="12" fill="#dc2626">no server in the middle</text></g>
+  </svg>
   <ul>
     <li><strong>Your files are never uploaded to a server</strong> — processing happens in your browser's memory.</li>
     <li><strong>No account, no sign-up, no email address</strong> — nothing to create, nothing to log into.</li>
@@ -249,7 +466,10 @@ body.dark-mode .content-page a{color:#93c5fd}
   <div class="support-card">
     <h2>Support the sites</h2>
     <p>JSM Tools stays free. If it helps, you can buy a coffee.</p>
-    <a class="bmc-btn" href="https://www.buymeacoffee.com/memoliro" target="_blank" rel="noopener">&#9749; Buy me a coffee</a>
+    <div class="support-btns">
+      <a class="bmc-btn" href="https://www.buymeacoffee.com/memoliro" target="_blank" rel="noopener">&#9749; Buy me a coffee</a>
+      <!-- Ko-Fi button goes here when memoli shares the exact Ko-Fi URL (ko-fi.com/memoliro is a 404 — do not guess it). -->
+    </div>
   </div>
 </section>
 </main>
@@ -322,6 +542,283 @@ body.dark-mode .content-page a{color:#93c5fd}
     if(drop) drop.classList.remove('open');
     nav.classList.remove('mobile-open'); ham.setAttribute('aria-expanded','false');
   }});
+})();
+</script>
+
+<script>
+/* ===== Hub v2 enrichment: all demos run 100% locally, no uploads ===== */
+(function(){
+'use strict';
+function $(id){ return document.getElementById(id); }
+function fmtKB(n){ return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.round(n / 1024) + ' KB'; }
+
+/* --- Bytes-uploaded counter: counts real upload traffic (fetch/XHR/beacon bodies) --- */
+var bytesUp = 0;
+var bytesEl = $('bytesUp');
+function renderBytes(){ if(bytesEl) bytesEl.textContent = String(bytesUp); }
+function bodyBytes(b){
+  if(b == null) return 0;
+  if(typeof b === 'string') return new Blob([b]).size;
+  if(b instanceof Blob) return b.size;
+  if(b instanceof ArrayBuffer) return b.byteLength;
+  if(b instanceof FormData){ var n = 0; b.forEach(function(v){ n += (typeof v === 'string') ? new Blob([v]).size : (v.size || 0); }); return n; }
+  if(b instanceof URLSearchParams) return new Blob([b.toString()]).size;
+  return 0;
+}
+if(window.fetch){
+  var nativeFetch = window.fetch;
+  window.fetch = function(input, init){
+    if(init && init.body) bytesUp += bodyBytes(init.body);
+    renderBytes();
+    return nativeFetch.apply(this, arguments);
+  };
+}
+if(window.XMLHttpRequest){
+  var nativeSend = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.send = function(body){ bytesUp += bodyBytes(body); renderBytes(); return nativeSend.apply(this, arguments); };
+}
+if(navigator.sendBeacon){
+  var nativeBeacon = navigator.sendBeacon;
+  navigator.sendBeacon = function(url, data){ bytesUp += bodyBytes(data); renderBytes(); return nativeBeacon.apply(this, arguments); };
+}
+renderBytes();
+
+/* --- Drag sliders (standing rule: centred tags, fade below ~20%, Before = true original bytes) --- */
+document.querySelectorAll('[data-ba]').forEach(function(wrap){
+  var range = wrap.querySelector('.ba-range');
+  var beforeTag = wrap.querySelector('.ba-tag-before');
+  var afterTag = wrap.querySelector('.ba-tag-after');
+  if(!range) return;
+  function apply(){
+    var v = parseFloat(range.value);
+    wrap.style.setProperty('--pos', v + '%');
+    if(beforeTag) beforeTag.style.opacity = v >= 20 ? '1' : '0';
+    if(afterTag) afterTag.style.opacity = v <= 80 ? '1' : '0';
+  }
+  range.addEventListener('input', apply);
+  apply();
+});
+
+/* --- Mini compressor (canvas, local only) --- */
+var compFile = null, compOrigURL = null, compOrigSize = 0, compName = 'image.jpg';
+var qualityRange = $('qualityRange'), qualityVal = $('qualityVal');
+var compStats = $('compressStats'), compDownload = $('compressDownload');
+var compDrop = $('compressDrop'), compInput = $('compressFile');
+function setQuality(q){
+  qualityRange.value = String(q);
+  qualityVal.textContent = String(q);
+  document.querySelectorAll('#compressDemo .demo-preset').forEach(function(b){
+    b.classList.toggle('active', parseInt(b.getAttribute('data-q'), 10) === q);
+  });
+}
+function runCompress(){
+  if(!compFile) return;
+  var img = new Image();
+  img.onload = function(){
+    var canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    var q = parseInt(qualityRange.value, 10) / 100;
+    canvas.toBlob(function(blob){
+      if(!blob){ compStats.textContent = 'Could not compress this image in this browser.'; return; }
+      var saving = compOrigSize ? Math.round((1 - blob.size / compOrigSize) * 100) : 0;
+      compStats.textContent = 'Original ' + fmtKB(compOrigSize) + ' → Compressed ' + fmtKB(blob.size) + ' (' + (saving >= 0 ? '−' + saving : '+' + Math.abs(saving)) + '%). Output is JPEG.';
+      compDownload.href = URL.createObjectURL(blob);
+      compDownload.download = compName.replace(/\.[^.]+$/, '') + '-compressed.jpg';
+      compDownload.style.display = '';
+    }, 'image/jpeg', q);
+  };
+  img.onerror = function(){ compStats.textContent = 'Could not read that image file.'; };
+  img.src = compOrigURL;
+}
+function loadCompFile(file){
+  if(!file || !/^image\//.test(file.type)){ compStats.textContent = 'Please choose an image file (JPG, PNG, WebP…).'; return; }
+  compFile = file; compOrigSize = file.size; compName = file.name || 'image.jpg';
+  if(compOrigURL) URL.revokeObjectURL(compOrigURL);
+  compOrigURL = URL.createObjectURL(file);
+  compStats.textContent = 'Loaded ' + file.name + ' (' + fmtKB(file.size) + ') — compressing…';
+  runCompress();
+}
+if(compDrop){
+  compInput.addEventListener('change', function(){ if(compInput.files[0]) loadCompFile(compInput.files[0]); });
+  ['dragover', 'dragenter'].forEach(function(ev){ compDrop.addEventListener(ev, function(e){ e.preventDefault(); compDrop.classList.add('dragover'); }); });
+  ['dragleave', 'drop'].forEach(function(ev){ compDrop.addEventListener(ev, function(e){ e.preventDefault(); compDrop.classList.remove('dragover'); }); });
+  compDrop.addEventListener('drop', function(e){ if(e.dataTransfer.files[0]) loadCompFile(e.dataTransfer.files[0]); });
+  qualityRange.addEventListener('input', function(){ setQuality(parseInt(qualityRange.value, 10)); runCompress(); });
+  document.querySelectorAll('#compressDemo .demo-preset').forEach(function(b){
+    b.addEventListener('click', function(){ setQuality(parseInt(b.getAttribute('data-q'), 10)); runCompress(); });
+  });
+  /* Pre-load the demo photo (same file the hero slider uses; cached by the browser). */
+  fetch('/assets/demo-original.jpg').then(function(r){ return r.blob(); }).then(function(blob){
+    loadCompFile(new File([blob], 'demo-original.jpg', { type: 'image/jpeg' }));
+  }).catch(function(){ compStats.textContent = 'Drop an image to try the compressor — or pick a file.'; });
+}
+
+/* --- Lyrics formatter (port of LyricPrep's real rules: chord lines, inline chords, section tags, spacing) --- */
+var SECTION_WORDS = [
+  [/^pre[-\s]?chorus$/i, 'Pre-Chorus'], [/^post[-\s]?chorus$/i, 'Post-Chorus'],
+  [/^verse$/i, 'Verse'], [/^chorus$/i, 'Chorus'], [/^bridge$/i, 'Bridge'],
+  [/^intro$/i, 'Intro'], [/^outro$/i, 'Outro'], [/^hook$/i, 'Hook'],
+  [/^drop$/i, 'Drop'], [/^refrain$/i, 'Refrain'], [/^instrumental$/i, 'Instrumental'],
+  [/^breakdown$/i, 'Breakdown'], [/^solo$/i, 'Solo'], [/^interlude$/i, 'Interlude'],
+  [/^spoken\s+word$/i, 'Spoken Word']
+];
+var CHORD_TOKEN = /^[A-G][#b]?(m|maj|min|dim|aug|sus|add)?[0-9]?$/;
+function isChordLine(line){
+  var parts = line.trim().split(/\s+/);
+  if(!parts[0] || parts.length > 6) return false;
+  return parts.every(function(p){ return CHORD_TOKEN.test(p); });
+}
+function formatLyrics(raw){
+  var removedChords = 0, removedInline = 0, sections = 0;
+  var out = [];
+  raw.replace(/\r\n?/g, '\n').split('\n').forEach(function(line){
+    var t = line.trim();
+    if(isChordLine(t)){ removedChords++; return; }
+    var m = t.match(/^(.*?)\s*\((?:x|repeat\s*x?)\s*\d*\)\s*$/i);
+    if(m && m[1].trim()){ t = m[1].trim(); }
+    else if(/^\((?:x|repeat)\s*\d*\)$/i.test(t)){ removedChords++; return; }
+    t = t.replace(/\[([A-G][#b]?(?:m|maj|min|dim|aug|sus|add)?[0-9]?)\]/g, function(){ removedInline++; return ''; }).replace(/\s{2,}/g, ' ').trim();
+    var tag = t.replace(/^\[|\]$/g, '').replace(/:\s*$/, '').trim();
+    var num = '';
+    var nm = tag.match(/^(.*?)\s+(\d+)$/);
+    if(nm){ tag = nm[1]; num = ' ' + nm[2]; }
+    for(var i = 0; i < SECTION_WORDS.length; i++){
+      if(SECTION_WORDS[i][0].test(tag)){ out.push('[' + SECTION_WORDS[i][1] + num + ']'); sections++; return; }
+    }
+    out.push(t);
+  });
+  var text = out.join('\n').replace(/\n{3,}/g, '\n\n').replace(/^\n+|\n+$/g, '');
+  return { text: text, removedChords: removedChords, removedInline: removedInline, sections: sections };
+}
+var EXAMPLE_LYRICS = 'verse\nG   C   D\nwalking down the old road, dust on my shoes\nsinging to the morning [Am] nothing left to lose\n\nCHORUS:\nHold on (x2)\nhold on to the sunlight\n\nverse 2\nwe are going home now';
+var lyricsInput = $('lyricsInput'), lyricsOutput = $('lyricsOutput'), lyricsStats = $('lyricsStats');
+function runLyrics(){
+  var raw = lyricsInput.value;
+  if(!raw.trim()){ lyricsOutput.textContent = 'Cleaned lyrics will appear here…'; lyricsStats.textContent = 'Nothing formatted yet.'; return; }
+  var r = formatLyrics(raw);
+  lyricsOutput.textContent = r.text || '(nothing left after cleaning)';
+  var lines = r.text ? r.text.split('\n').length : 0;
+  lyricsStats.textContent = lines + ' lines · ' + r.sections + ' section' + (r.sections === 1 ? '' : 's') + ' · ' + r.removedChords + ' chord line' + (r.removedChords === 1 ? '' : 's') + ' removed · ' + r.removedInline + ' inline chord' + (r.removedInline === 1 ? '' : 's') + ' removed.';
+}
+if(lyricsInput){
+  $('lyricsExample').addEventListener('click', function(){ lyricsInput.value = EXAMPLE_LYRICS; runLyrics(); });
+  $('lyricsFormat').addEventListener('click', runLyrics);
+  lyricsInput.addEventListener('input', runLyrics);
+  $('lyricsCopy').addEventListener('click', function(){
+    var btn = $('lyricsCopy');
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(lyricsOutput.textContent).then(function(){
+        btn.textContent = 'Copied ✓'; setTimeout(function(){ btn.textContent = 'Copy result'; }, 1500);
+      });
+    }
+  });
+}
+
+/* --- Audio waveform (decode locally, draw peaks + peak/RMS) --- */
+var audioDrop = $('audioDrop'), audioFile = $('audioFile'), waveCanvas = $('waveCanvas'), audioStats = $('audioStats');
+var audioCtx = null;
+function drawWave(buffer){
+  var ch = buffer.getChannelData(0);
+  var ctx2 = waveCanvas.getContext('2d');
+  var W = waveCanvas.width, H = waveCanvas.height;
+  ctx2.clearRect(0, 0, W, H);
+  ctx2.fillStyle = '#16a34a';
+  var step = Math.max(1, Math.floor(ch.length / W));
+  for(var x = 0; x < W; x++){
+    var start = x * step, peak = 0, skip = Math.max(1, Math.floor(step / 8));
+    for(var i = start; i < start + step && i < ch.length; i += skip){ var a = Math.abs(ch[i]); if(a > peak) peak = a; }
+    var h = Math.max(1, peak * H);
+    ctx2.fillRect(x, (H - h) / 2, 1, h);
+  }
+  var peakDb = 0, sumSq = 0, n = 0;
+  for(var j = 0; j < ch.length; j += 10){ var v = ch[j]; if(Math.abs(v) > peakDb) peakDb = Math.abs(v); sumSq += v * v; n++; }
+  var rms = Math.sqrt(sumSq / Math.max(1, n));
+  var peakText = peakDb > 0 ? (20 * Math.log10(peakDb)).toFixed(1) : '−∞';
+  var rmsText = rms > 0 ? (20 * Math.log10(rms)).toFixed(1) : '−∞';
+  var dur = buffer.duration;
+  var mm = Math.floor(dur / 60), ss = Math.round(dur % 60);
+  audioStats.innerHTML = '<strong>Duration</strong> ' + mm + ':' + String(ss).padStart(2, '0') + ' · <strong>Peak</strong> ' + peakText + ' dB · <strong>RMS</strong> ' + rmsText + ' dB · <strong>Sample rate</strong> ' + buffer.sampleRate + ' Hz · <strong>Channels</strong> ' + buffer.numberOfChannels;
+  audioStats.hidden = false;
+  waveCanvas.hidden = false;
+}
+function loadAudioFile(file){
+  if(!file || (!/^audio\//.test(file.type) && !/\.(mp3|wav|ogg|m4a|flac)$/i.test(file.name))){
+    audioStats.textContent = 'Please choose an audio file (MP3, WAV, OGG, M4A, FLAC).'; audioStats.hidden = false; return;
+  }
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  file.arrayBuffer().then(function(buf){ return audioCtx.decodeAudioData(buf); }).then(function(decoded){
+    drawWave(decoded);
+  }).catch(function(){ audioStats.textContent = 'Could not decode that audio file in this browser.'; audioStats.hidden = false; });
+}
+if(audioDrop){
+  audioFile.addEventListener('change', function(){ if(audioFile.files[0]) loadAudioFile(audioFile.files[0]); });
+  ['dragover', 'dragenter'].forEach(function(ev){ audioDrop.addEventListener(ev, function(e){ e.preventDefault(); audioDrop.classList.add('dragover'); }); });
+  ['dragleave', 'drop'].forEach(function(ev){ audioDrop.addEventListener(ev, function(e){ e.preventDefault(); audioDrop.classList.remove('dragover'); }); });
+  audioDrop.addEventListener('drop', function(e){ if(e.dataTransfer.files[0]) loadAudioFile(e.dataTransfer.files[0]); });
+}
+
+/* --- Photo Adjust (CSS filters on the true original photo — no re-encode) --- */
+var adjustImg = $('adjustImg');
+function applyAdjust(){
+  var b = $('brightRange').value, c = $('contrastRange').value, s = $('satRange').value;
+  adjustImg.style.filter = 'brightness(' + b + '%) contrast(' + c + '%) saturate(' + s + '%)';
+  $('brightVal').textContent = b + '%';
+  $('contrastVal').textContent = c + '%';
+  $('satVal').textContent = s + '%';
+}
+if(adjustImg){
+  ['brightRange', 'contrastRange', 'satRange'].forEach(function(id){ $(id).addEventListener('input', applyAdjust); });
+  $('adjustReset').addEventListener('click', function(){
+    $('brightRange').value = 100; $('contrastRange').value = 100; $('satRange').value = 100;
+    applyAdjust();
+  });
+  applyAdjust();
+}
+
+/* --- Options payoff (long call; green = profit, red = loss) --- */
+var payoffCanvas = $('payoffCanvas'), payoffStats = $('payoffStats');
+function drawPayoff(){
+  var K = parseFloat($('optStrike').value) || 0;
+  var P = parseFloat($('optPrem').value) || 0;
+  var Q = parseInt($('optQty').value, 10) || 1;
+  var mult = 100 * Q;
+  var lo = Math.max(0, K - 30), hi = K + 30;
+  var ctx = payoffCanvas.getContext('2d');
+  var W = payoffCanvas.width, H = payoffCanvas.height, pad = 46;
+  ctx.clearRect(0, 0, W, H);
+  var maxPL = Math.max((hi - K) * mult - P * mult, 1);
+  var minPL = -P * mult;
+  function X(s){ return pad + (s - lo) / (hi - lo) * (W - pad * 2); }
+  function Y(pl){ return H - pad - (pl - minPL) / (maxPL - minPL) * (H - pad * 2); }
+  function plAt(s){ return Math.max(s - K, 0) * mult - P * mult; }
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad, Y(0)); ctx.lineTo(W - pad, Y(0)); ctx.stroke();
+  var be = K + P, steps = 60, i, s;
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#dc2626';
+  ctx.beginPath(); ctx.moveTo(X(lo), Y(plAt(lo)));
+  for(i = 1; i <= steps; i++){ s = lo + (be - lo) * i / steps; ctx.lineTo(X(s), Y(plAt(s))); }
+  ctx.stroke();
+  ctx.strokeStyle = '#16a34a';
+  ctx.beginPath(); ctx.moveTo(X(be), Y(0));
+  for(i = 1; i <= steps; i++){ s = be + (hi - be) * i / steps; ctx.lineTo(X(s), Y(plAt(s))); }
+  ctx.stroke();
+  ctx.fillStyle = '#64748b'; ctx.font = '13px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('$' + lo, X(lo), H - 14);
+  ctx.fillText('$' + Math.round(be), X(be), H - 14);
+  ctx.fillText('$' + hi, X(hi), H - 14);
+  ctx.textAlign = 'left';
+  ctx.fillText('Max loss −$' + (P * mult).toLocaleString(), pad, 20);
+  ctx.fillText('Break-even $' + be.toFixed(2), pad, 38);
+  ctx.fillStyle = '#16a34a';
+  ctx.fillText('Profit at $' + hi + ': +$' + Math.round(plAt(hi)).toLocaleString(), pad, 56);
+  payoffStats.innerHTML = '<strong>Max loss</strong> −$' + (P * mult).toLocaleString() + ' (the premium) · <strong>Break-even</strong> $' + be.toFixed(2) + ' · <strong>Profit at $' + hi + '</strong> +$' + Math.round(plAt(hi)).toLocaleString() + ' · <strong>Cost</strong> $' + (P * mult).toLocaleString() + ' for ' + Q + ' contract' + (Q === 1 ? '' : 's') + '.';
+}
+if(payoffCanvas){
+  ['optStrike', 'optPrem', 'optQty'].forEach(function(id){ $(id).addEventListener('input', drawPayoff); });
+  drawPayoff();
+}
 })();
 </script>
 </body>
