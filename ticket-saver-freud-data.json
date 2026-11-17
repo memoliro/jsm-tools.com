@@ -112,6 +112,33 @@
    "reason": "No cleaning sign for this side passed the segment + band + intersection checks in the city's signage data. Cleaning signs attributed to this side in the segment: 0. The data may be incomplete."
   }
  },
+ "streets": [
+  {
+   "slug": "des-pins",
+   "name": "Avenue des Pins Ouest",
+   "short": "des Pins",
+   "lat": 45.49758,
+   "lon": -73.58655,
+   "url": "ticket-saver.html"
+  },
+  {
+   "slug": "lacombe",
+   "name": "Avenue Lacombe",
+   "short": "Lacombe",
+   "lat": 45.4923084,
+   "lon": -73.6271438,
+   "url": "ticket-saver-lacombe.html"
+  },
+  {
+   "slug": "freud",
+   "name": "Avenue Freud",
+   "short": "Freud",
+   "lat": 45.4783324,
+   "lon": -73.671232,
+   "url": "ticket-saver-freud.html"
+  }
+ ],
+ "street_switch_m": 300,
  "attributed_signs": [],
  "counts": {
   "fetched_in_box": 9,

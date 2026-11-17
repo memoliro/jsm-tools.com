@@ -196,12 +196,12 @@
      "lon": -73.586511
     },
     {
-     "verbatim": "\\P EN TOUT TEMPS",
+     "verbatim": "\\A EN TOUT TEMPS",
      "lat": 45.498319,
      "lon": -73.586455
     },
     {
-     "verbatim": "\\A EN TOUT TEMPS",
+     "verbatim": "\\P EN TOUT TEMPS",
      "lat": 45.498319,
      "lon": -73.586455
     },
@@ -243,6 +243,34 @@
    "source": "P 15 min 07h-18h LUN. AU VEN."
   }
  },
+ "streets": [
+  {
+   "slug": "des-pins",
+   "name": "Avenue des Pins Ouest",
+   "short": "des Pins",
+   "lat": 45.49758,
+   "lon": -73.58655,
+   "url": "ticket-saver.html"
+  },
+  {
+   "slug": "lacombe",
+   "name": "Avenue Lacombe",
+   "short": "Lacombe",
+   "lat": 45.4923084,
+   "lon": -73.6271438,
+   "url": "ticket-saver-lacombe.html"
+  },
+  {
+   "slug": "freud",
+   "name": "Avenue Freud",
+   "short": "Freud",
+   "lat": 45.4783324,
+   "lon": -73.671232,
+   "url": "ticket-saver-freud.html"
+  }
+ ],
+ "street_switch_m": 300,
+ "slug": "des-pins",
  "attributed_signs": [
   {
    "poteau_id": "163078",
@@ -448,37 +476,6 @@
   },
   {
    "poteau_id": "75010",
-   "position": "7",
-   "panneau_id": "1842004",
-   "code_rpa": "SD-TT",
-   "fleche_pan": "2",
-   "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.",
-   "lat": 45.497194,
-   "lon": -73.587332,
-   "distance_to_centreline_m": 8.3,
-   "cross_track_m": -8.3,
-   "side": "NW",
-   "segment": 28,
-   "along_track_from_home_block_m": 66.7,
-   "poteau_version": "4",
-   "date_conception": "2023-10-04",
-   "date_execution": "2023-10-18",
-   "parsed": {
-    "verbatim": "\\P EN TOUT TEMPS",
-    "normalized": "\\P EN TOUT TEMPS",
-    "kind": "permanent_ban",
-    "window": null,
-    "exception": null,
-    "confidence": null,
-    "code_rpa": "SD-TT",
-    "code_agrees": null,
-    "notes": [
-     "No-parking at all times (\\P family). Scope is set by the sign's arrow (FLECHE_PAN, undecodable) — a whole-side ban is not asserted from this panel alone."
-    ]
-   }
-  },
-  {
-   "poteau_id": "75010",
    "position": "6",
    "panneau_id": "1842005",
    "code_rpa": "PV-DB",
@@ -509,33 +506,33 @@
    }
   },
   {
-   "poteau_id": "75043",
-   "position": "6",
-   "panneau_id": "1428389",
-   "code_rpa": "PV-PB",
-   "fleche_pan": "0",
+   "poteau_id": "75010",
+   "position": "7",
+   "panneau_id": "1842004",
+   "code_rpa": "SD-TT",
+   "fleche_pan": "2",
    "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.",
-   "lat": 45.497311,
-   "lon": -73.587033,
-   "distance_to_centreline_m": 5.9,
-   "cross_track_m": 5.9,
-   "side": "SE",
+   "lat": 45.497194,
+   "lon": -73.587332,
+   "distance_to_centreline_m": 8.3,
+   "cross_track_m": -8.3,
+   "side": "NW",
    "segment": 28,
-   "along_track_from_home_block_m": 44.2,
-   "poteau_version": "8",
-   "date_conception": "2019-08-16",
-   "date_execution": "2019-08-22",
+   "along_track_from_home_block_m": 66.7,
+   "poteau_version": "4",
+   "date_conception": "2023-10-04",
+   "date_execution": "2023-10-18",
    "parsed": {
-    "verbatim": "P 02h 09h-18h LUN. AU VEN.",
-    "normalized": "P 02H 09H-18H LUN. AU VEN.",
-    "kind": "other",
+    "verbatim": "\\P EN TOUT TEMPS",
+    "normalized": "\\P EN TOUT TEMPS",
+    "kind": "permanent_ban",
     "window": null,
     "exception": null,
     "confidence": null,
-    "code_rpa": "PV-PB",
+    "code_rpa": "SD-TT",
     "code_agrees": null,
     "notes": [
-     "Not a cleaning sign (time limit / school / loading / other family)."
+     "No-parking at all times (\\P family). Scope is set by the sign's arrow (FLECHE_PAN, undecodable) — a whole-side ban is not asserted from this panel alone."
     ]
    }
   },
@@ -584,6 +581,37 @@
     "code_rpa": "SB-JU-A",
     "code_agrees": true,
     "notes": []
+   }
+  },
+  {
+   "poteau_id": "75043",
+   "position": "6",
+   "panneau_id": "1428389",
+   "code_rpa": "PV-PB",
+   "fleche_pan": "0",
+   "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.",
+   "lat": 45.497311,
+   "lon": -73.587033,
+   "distance_to_centreline_m": 5.9,
+   "cross_track_m": 5.9,
+   "side": "SE",
+   "segment": 28,
+   "along_track_from_home_block_m": 44.2,
+   "poteau_version": "8",
+   "date_conception": "2019-08-16",
+   "date_execution": "2019-08-22",
+   "parsed": {
+    "verbatim": "P 02h 09h-18h LUN. AU VEN.",
+    "normalized": "P 02H 09H-18H LUN. AU VEN.",
+    "kind": "other",
+    "window": null,
+    "exception": null,
+    "confidence": null,
+    "code_rpa": "PV-PB",
+    "code_agrees": null,
+    "notes": [
+     "Not a cleaning sign (time limit / school / loading / other family)."
+    ]
    }
   },
   {
@@ -1054,37 +1082,6 @@
   },
   {
    "poteau_id": "75038",
-   "position": "7",
-   "panneau_id": "1001463",
-   "code_rpa": "AD-TT",
-   "fleche_pan": "3",
-   "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.",
-   "lat": 45.498306,
-   "lon": -73.586266,
-   "distance_to_centreline_m": 5.7,
-   "cross_track_m": 5.7,
-   "side": "SE",
-   "segment": 20,
-   "along_track_from_home_block_m": -81.0,
-   "poteau_version": "7",
-   "date_conception": "2014-01-09",
-   "date_execution": "2014-01-09",
-   "parsed": {
-    "verbatim": "\\A EN TOUT TEMPS",
-    "normalized": "\\A EN TOUT TEMPS",
-    "kind": "permanent_ban",
-    "window": null,
-    "exception": null,
-    "confidence": null,
-    "code_rpa": "AD-TT",
-    "code_agrees": null,
-    "notes": [
-     "No-stopping at all times (\\A family) — a stopping ban, not a parking-cleaning window. Scope set by the arrow."
-    ]
-   }
-  },
-  {
-   "poteau_id": "75038",
    "position": "5",
    "panneau_id": "1001465",
    "code_rpa": "PV-PB",
@@ -1115,33 +1112,33 @@
    }
   },
   {
-   "poteau_id": "237657",
-   "position": "6",
-   "panneau_id": "1842315",
-   "code_rpa": "SD-TT",
+   "poteau_id": "75038",
+   "position": "7",
+   "panneau_id": "1001463",
+   "code_rpa": "AD-TT",
    "fleche_pan": "3",
    "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.",
-   "lat": 45.498319,
-   "lon": -73.586455,
-   "distance_to_centreline_m": 8.0,
-   "cross_track_m": -8.0,
-   "side": "NW",
+   "lat": 45.498306,
+   "lon": -73.586266,
+   "distance_to_centreline_m": 5.7,
+   "cross_track_m": 5.7,
+   "side": "SE",
    "segment": 20,
-   "along_track_from_home_block_m": -75.3,
-   "poteau_version": "3",
-   "date_conception": "2023-10-05",
-   "date_execution": "2023-11-03",
+   "along_track_from_home_block_m": -81.0,
+   "poteau_version": "7",
+   "date_conception": "2014-01-09",
+   "date_execution": "2014-01-09",
    "parsed": {
-    "verbatim": "\\P EN TOUT TEMPS",
-    "normalized": "\\P EN TOUT TEMPS",
+    "verbatim": "\\A EN TOUT TEMPS",
+    "normalized": "\\A EN TOUT TEMPS",
     "kind": "permanent_ban",
     "window": null,
     "exception": null,
     "confidence": null,
-    "code_rpa": "SD-TT",
+    "code_rpa": "AD-TT",
     "code_agrees": null,
     "notes": [
-     "No-parking at all times (\\P family). Scope is set by the sign's arrow (FLECHE_PAN, undecodable) — a whole-side ban is not asserted from this panel alone."
+     "No-stopping at all times (\\A family) — a stopping ban, not a parking-cleaning window. Scope set by the arrow."
     ]
    }
   },
@@ -1177,22 +1174,22 @@
    }
   },
   {
-   "poteau_id": "157098",
-   "position": "7",
-   "panneau_id": "1841985",
+   "poteau_id": "237657",
+   "position": "6",
+   "panneau_id": "1842315",
    "code_rpa": "SD-TT",
-   "fleche_pan": "2",
+   "fleche_pan": "3",
    "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.",
-   "lat": 45.498418,
-   "lon": -73.586377,
-   "distance_to_centreline_m": 7.8,
-   "cross_track_m": -7.8,
+   "lat": 45.498319,
+   "lon": -73.586455,
+   "distance_to_centreline_m": 8.0,
+   "cross_track_m": -8.0,
    "side": "NW",
    "segment": 20,
-   "along_track_from_home_block_m": -87.8,
-   "poteau_version": "6",
-   "date_conception": "2023-10-04",
-   "date_execution": "2023-10-18",
+   "along_track_from_home_block_m": -75.3,
+   "poteau_version": "3",
+   "date_conception": "2023-10-05",
+   "date_execution": "2023-11-03",
    "parsed": {
     "verbatim": "\\P EN TOUT TEMPS",
     "normalized": "\\P EN TOUT TEMPS",
@@ -1235,6 +1232,37 @@
     "code_agrees": null,
     "notes": [
      "Not a cleaning sign (time limit / school / loading / other family)."
+    ]
+   }
+  },
+  {
+   "poteau_id": "157098",
+   "position": "7",
+   "panneau_id": "1841985",
+   "code_rpa": "SD-TT",
+   "fleche_pan": "2",
+   "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.",
+   "lat": 45.498418,
+   "lon": -73.586377,
+   "distance_to_centreline_m": 7.8,
+   "cross_track_m": -7.8,
+   "side": "NW",
+   "segment": 20,
+   "along_track_from_home_block_m": -87.8,
+   "poteau_version": "6",
+   "date_conception": "2023-10-04",
+   "date_execution": "2023-10-18",
+   "parsed": {
+    "verbatim": "\\P EN TOUT TEMPS",
+    "normalized": "\\P EN TOUT TEMPS",
+    "kind": "permanent_ban",
+    "window": null,
+    "exception": null,
+    "confidence": null,
+    "code_rpa": "SD-TT",
+    "code_agrees": null,
+    "notes": [
+     "No-parking at all times (\\P family). Scope is set by the sign's arrow (FLECHE_PAN, undecodable) — a whole-side ban is not asserted from this panel alone."
     ]
    }
   },
