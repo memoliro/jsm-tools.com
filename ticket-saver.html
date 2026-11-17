@@ -561,7 +561,9 @@ function renderSideCards() {
         html += '<div style="font-size:21px;font-weight:700;margin-top:4px">' + esc(windowHeadline(w)) + '</div>';
         if (w.source === "photo") {
           html += '<div class="sign">Sign says: <span class="fr">' + esc(w.verbatim) + '</span><br>'
-            + '<span class="note">' + esc(w.photo_note || "") + '</span></div>';
+            + '<span class="note">' + esc(w.photo_note || "") + '</span>'
+            + (w.photo_url ? '<br><a href="' + esc(w.photo_url) + '" target="_blank" rel="noopener">See the sign photo</a>' : '')
+            + '</div>';
         } else {
           html += '<div class="sign">Sign says: <span class="fr">' + esc(w.verbatim) + '</span><br>'
             + '<span class="note">' + w.signs.length + ' pole(s) on this side carry this sign ('
