@@ -141,6 +141,7 @@
       <button class="limittile" data-limit="120">2 h</button>
       <button class="limittile" data-limit="240">4 h</button>
     </div>
+    <div id="limitAnchorNote" style="font-size:15px;color:#9AA0A8;margin-top:8px"></div>
     <div id="limitRunning" class="hidden">
       <div class="big" id="limitCount" style="margin-top:12px">—</div>
       <div id="limitDetail" style="font-size:17px"></div>
@@ -395,14 +396,59 @@ var LIMIT_OPTIONS = [15, 60, 120, 240];   /* minutes */
 var LIMIT_LABELS = { 15: "15 min", 60: "1 hour", 120: "2 hours", 240: "4 hours" };
 /* Alarm lead + warning window: last 10 min, except the 15-min tile (last 5 min). */
 function alarmLeadMin(limitMin) { return limitMin <= 15 ? 5 : 10; }
-/* Pure state: { state: 'counting' | 'warning' | 'expired', end, remainingMs, limitMin, parkedAt } */
+/* Pure state: { state: 'counting' | 'warning' | 'expired' | 'waiting', end, remainingMs, limitMin, parkedAt }.
+   'waiting' = the timer is anchored to a future window start (parked overnight):
+   the limit has not started running yet. */
 function limitState(parkedAtMs, limitMin, nowMs) {
   var end = parkedAtMs + limitMin * 60000;
   var remaining = end - nowMs;
   var state = remaining <= 0 ? "expired"
-    : (remaining <= alarmLeadMin(limitMin) * 60000 ? "warning" : "counting");
+    : (parkedAtMs > nowMs ? "waiting"
+    : (remaining <= alarmLeadMin(limitMin) * 60000 ? "warning" : "counting"));
   return { state: state, end: new Date(end), remainingMs: remaining,
            limitMin: limitMin, parkedAt: new Date(parkedAtMs) };
+}
+function parseHM(s) { var a = String(s).split(":"); return { h: +a[0], mi: +a[1] }; }
+/* Anchoring: the posted limit only runs inside its hours (DATA.limit:
+   { days: [0..6] (JS: 0=Sun), start: "09:00", end: "18:00", minutes: 120 }
+   in America/Toronto wall time). A tile tapped before the window opens starts
+   the countdown at the window start — a car parked overnight starts its
+   2 hours at 9:00, not at the tap. Inside the window it starts now; after
+   the window (or on a non-limit day) it starts at the next window open.
+   Without DATA.limit the tap is the start (old behavior). Pure. */
+function anchorLimitStart(nowMs) {
+  var lim = (typeof DATA !== "undefined" && DATA) ? DATA.limit : null;
+  if (!lim || !lim.days || !lim.start || !lim.end) return nowMs;
+  var st = parseHM(lim.start), en = parseHM(lim.end);
+  var p = tzParts(new Date(nowMs));
+  for (var i = 0; i < 8; i++) {
+    var d = new Date(Date.UTC(p.y, p.mo - 1, p.d + i));
+    var wd = d.getUTCDay();
+    if (lim.days.indexOf(wd) < 0) continue;
+    var open = torontoToUtc(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(), st.h, st.mi).getTime();
+    var close = torontoToUtc(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(), en.h, en.mi).getTime();
+    if (nowMs < open) return open;
+    if (nowMs < close) return nowMs;
+    /* else: today is a limit day but the window already closed — next day */
+  }
+  return nowMs; /* unreachable with a non-empty days list, but never loop forever */
+}
+/* Auto-arm (his call Nov 17): the timer starts itself — no tile tap. On load,
+   if no timer is saved and the posted limit opens later today, arm the
+   posted-limit timer at today's window start. It keeps counting until he taps
+   Clear ("I'm back"). After a Clear, nothing re-arms until the next limit
+   day's pre-window period — a mid-day park stays manual (tap a tile =
+   "I just parked"). Pure except for the localStorage read. */
+function maybeAutoArmLimit(nowMs) {
+  if (getLimitTimer()) return null;
+  var lim = (typeof DATA !== "undefined" && DATA) ? DATA.limit : null;
+  if (!lim || !lim.days || !lim.start || !lim.end) return null;
+  var p = tzParts(new Date(nowMs));
+  if (lim.days.indexOf(p.wd) < 0) return null;
+  var st = parseHM(lim.start);
+  var open = torontoToUtc(p.y, p.mo, p.d, st.h, st.mi).getTime();
+  if (nowMs >= open) return null; /* inside/after the window: manual only */
+  return { parkedAt: open, limitMin: lim.minutes || 120 };
 }
 function getLimitTimer() {
   try {
@@ -418,7 +464,7 @@ function saveLimitTimer(parkedAtMs, limitMin) {
   try { localStorage.setItem(LIMIT_KEY, JSON.stringify(o)); } catch (e) { /* private mode */ }
   return o;
 }
-function startLimitTimer(limitMin) { return saveLimitTimer(Date.now(), limitMin); }
+function startLimitTimer(limitMin) { return saveLimitTimer(anchorLimitStart(Date.now()), limitMin); }
 function clearLimitTimer() {
   try { localStorage.removeItem(LIMIT_KEY); } catch (e) { /* private mode */ }
 }
@@ -559,9 +605,9 @@ function heroState(key, now) {
              detail: "No cleaning windows until then.",
              exception: w.exception || null };
   }
+  /* Next window: date + time only — no "in 2 days, 10 h" counter (his call Nov 17). */
   return { mode: "next", showIcs: true,
            title: fmtDateShortToronto(nw.start) + " · " + fmtTimeRangeShort(nw.start, nw.end),
-           count: "in " + fmtCountdownShort(nw.start - now),
            detail: "",
            exception: w.exception || null };
 }
@@ -579,7 +625,9 @@ function renderHero() {
   hero.classList.toggle("now", st.mode === "now");
   hero.classList.toggle("next", st.mode === "next");
   el("heroTitle").textContent = st.title || "—";
-  el("heroCount").textContent = st.count || "—";
+  var hc = el("heroCount");
+  hc.textContent = st.count || "";
+  hc.classList.toggle("hidden", !st.count);
   el("heroDetail").textContent = st.detail || "";
   el("icsBtn").classList.toggle("hidden", !st.showIcs);
 }
@@ -591,6 +639,7 @@ function limitRowLabel(t, nowMs) {
   if (!t) return "Parking limit timer";
   var st = limitState(t.parkedAt, t.limitMin, nowMs);
   if (st.state === "expired") return "Limit reached";
+  if (st.state === "waiting") return "Starts " + fmtTimeToronto(new Date(t.parkedAt)) + " · ends " + fmtTimeToronto(st.end);
   return fmtCountdown(st.remainingMs) + " left · ends " + fmtTimeToronto(st.end);
 }
 function setLimitOpen(open) {
@@ -607,6 +656,10 @@ function renderLimit() {
     tiles[i].classList.toggle("selected", !!t && +tiles[i].getAttribute("data-limit") === t.limitMin);
   }
   el("limitToggleText").textContent = limitRowLabel(t, Date.now());
+  var an = el("limitAnchorNote");
+  if (an) an.textContent = (typeof DATA !== "undefined" && DATA && DATA.limit)
+    ? "If you tap before the posted hours start, the countdown starts when they start — the limit runs from the sign's hours, not from your tap."
+    : "";
   var running = el("limitRunning");
   if (!t) { running.classList.add("hidden"); return; }
   running.classList.remove("hidden");
@@ -617,6 +670,9 @@ function renderLimit() {
     el("limitCount").textContent = "Limit reached";
     warn.classList.remove("hidden");
     warn.textContent = "Limit reached — move the car.";
+  } else if (st.state === "waiting") {
+    el("limitCount").textContent = "Starts " + fmtTimeToronto(new Date(t.parkedAt));
+    warn.classList.add("hidden");
   } else {
     /* No pre-warning: the countdown already shows single-digit minutes. */
     el("limitCount").textContent = fmtCountdown(st.remainingMs) + " left";
@@ -743,7 +799,13 @@ function showMain() {
 }
 
 function init() {
+  /* Auto-arm the limit timer before the first render, so the countdown is
+     already running (and visible) with no tap. */
+  var armed = maybeAutoArmLimit(Date.now());
+  if (armed) saveLimitTimer(armed.parkedAt, armed.limitMin);
   renderAll();
+  /* A running timer must not hide behind the collapsed tiles. */
+  if (getLimitTimer()) setLimitOpen(true);
   try { if (localStorage.getItem(SWIPED_KEY) === "1") el("swipeHint").classList.add("hidden"); } catch (e) { /* private mode */ }
   el("btnEven").addEventListener("click", function () { setSelectedSide("even"); });
   el("btnOdd").addEventListener("click", function () { setSelectedSide("odd"); });
@@ -822,6 +884,7 @@ if (typeof window !== "undefined") {
     windowHeadline: windowHeadline, heroState: heroState,
     torontoToUtc: torontoToUtc, tzParts: tzParts, inSeason: inSeason, DATA: DATA,
     limitState: limitState, alarmLeadMin: alarmLeadMin, buildLimitIcs: buildLimitIcs,
+    anchorLimitStart: anchorLimitStart, maybeAutoArmLimit: maybeAutoArmLimit,
     getLimitTimer: getLimitTimer, saveLimitTimer: saveLimitTimer,
     clearLimitTimer: clearLimitTimer, LIMIT_KEY: LIMIT_KEY, LIMIT_OPTIONS: LIMIT_OPTIONS,
     showDetails: showDetails, showMain: showMain, swipeDirection: swipeDirection,

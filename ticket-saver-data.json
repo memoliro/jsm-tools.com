@@ -1,7 +1,7 @@
 {
  "app": "Ticket Saver v1 (cleaning only)",
- "generated_date": "2026-11-16",
- "data_as_of": "2026-11-16",
+ "generated_date": "2026-11-17",
+ "data_as_of": "2026-11-17",
  "provisional": false,
  "verification": {
   "verified": true,
@@ -196,12 +196,12 @@
      "lon": -73.586511
     },
     {
-     "verbatim": "\\P EN TOUT TEMPS",
+     "verbatim": "\\A EN TOUT TEMPS",
      "lat": 45.498319,
      "lon": -73.586455
     },
     {
-     "verbatim": "\\A EN TOUT TEMPS",
+     "verbatim": "\\P EN TOUT TEMPS",
      "lat": 45.498319,
      "lon": -73.586455
     },
@@ -212,6 +212,20 @@
     }
    ]
   }
+ },
+ "limit": {
+  "minutes": 120,
+  "days": [
+   1,
+   2,
+   3,
+   4,
+   5
+  ],
+  "start": "09:00",
+  "end": "18:00",
+  "poles": 6,
+  "source": "P 02h 09h-18h LUN. AU VEN."
  },
  "attributed_signs": [
   {
@@ -418,37 +432,6 @@
   },
   {
    "poteau_id": "75010",
-   "position": "6",
-   "panneau_id": "1842005",
-   "code_rpa": "PV-DB",
-   "fleche_pan": "3",
-   "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.",
-   "lat": 45.497194,
-   "lon": -73.587332,
-   "distance_to_centreline_m": 8.3,
-   "cross_track_m": -8.3,
-   "side": "NW",
-   "segment": 28,
-   "along_track_from_home_block_m": 66.7,
-   "poteau_version": "4",
-   "date_conception": "2023-10-04",
-   "date_execution": "2023-10-18",
-   "parsed": {
-    "verbatim": "P 15 min 07h-18h LUN. AU VEN.",
-    "normalized": "P 15 MIN 07H-18H LUN. AU VEN.",
-    "kind": "other",
-    "window": null,
-    "exception": null,
-    "confidence": null,
-    "code_rpa": "PV-DB",
-    "code_agrees": null,
-    "notes": [
-     "Not a cleaning sign (time limit / school / loading / other family)."
-    ]
-   }
-  },
-  {
-   "poteau_id": "75010",
    "position": "7",
    "panneau_id": "1842004",
    "code_rpa": "SD-TT",
@@ -479,30 +462,30 @@
    }
   },
   {
-   "poteau_id": "75043",
+   "poteau_id": "75010",
    "position": "6",
-   "panneau_id": "1428389",
-   "code_rpa": "PV-PB",
-   "fleche_pan": "0",
+   "panneau_id": "1842005",
+   "code_rpa": "PV-DB",
+   "fleche_pan": "3",
    "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.",
-   "lat": 45.497311,
-   "lon": -73.587033,
-   "distance_to_centreline_m": 5.9,
-   "cross_track_m": 5.9,
-   "side": "SE",
+   "lat": 45.497194,
+   "lon": -73.587332,
+   "distance_to_centreline_m": 8.3,
+   "cross_track_m": -8.3,
+   "side": "NW",
    "segment": 28,
-   "along_track_from_home_block_m": 44.2,
-   "poteau_version": "8",
-   "date_conception": "2019-08-16",
-   "date_execution": "2019-08-22",
+   "along_track_from_home_block_m": 66.7,
+   "poteau_version": "4",
+   "date_conception": "2023-10-04",
+   "date_execution": "2023-10-18",
    "parsed": {
-    "verbatim": "P 02h 09h-18h LUN. AU VEN.",
-    "normalized": "P 02H 09H-18H LUN. AU VEN.",
+    "verbatim": "P 15 min 07h-18h LUN. AU VEN.",
+    "normalized": "P 15 MIN 07H-18H LUN. AU VEN.",
     "kind": "other",
     "window": null,
     "exception": null,
     "confidence": null,
-    "code_rpa": "PV-PB",
+    "code_rpa": "PV-DB",
     "code_agrees": null,
     "notes": [
      "Not a cleaning sign (time limit / school / loading / other family)."
@@ -554,6 +537,37 @@
     "code_rpa": "SB-JU-A",
     "code_agrees": true,
     "notes": []
+   }
+  },
+  {
+   "poteau_id": "75043",
+   "position": "6",
+   "panneau_id": "1428389",
+   "code_rpa": "PV-PB",
+   "fleche_pan": "0",
+   "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.",
+   "lat": 45.497311,
+   "lon": -73.587033,
+   "distance_to_centreline_m": 5.9,
+   "cross_track_m": 5.9,
+   "side": "SE",
+   "segment": 28,
+   "along_track_from_home_block_m": 44.2,
+   "poteau_version": "8",
+   "date_conception": "2019-08-16",
+   "date_execution": "2019-08-22",
+   "parsed": {
+    "verbatim": "P 02h 09h-18h LUN. AU VEN.",
+    "normalized": "P 02H 09H-18H LUN. AU VEN.",
+    "kind": "other",
+    "window": null,
+    "exception": null,
+    "confidence": null,
+    "code_rpa": "PV-PB",
+    "code_agrees": null,
+    "notes": [
+     "Not a cleaning sign (time limit / school / loading / other family)."
+    ]
    }
   },
   {
@@ -650,37 +664,6 @@
    }
   },
   {
-   "poteau_id": "75019",
-   "position": "6",
-   "panneau_id": "1849304",
-   "code_rpa": "PV-DB",
-   "fleche_pan": "3",
-   "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.",
-   "lat": 45.497716,
-   "lon": -73.586902,
-   "distance_to_centreline_m": 6.6,
-   "cross_track_m": -6.6,
-   "side": "NW",
-   "segment": 26,
-   "along_track_from_home_block_m": -0.0,
-   "poteau_version": "11",
-   "date_conception": "2023-10-24",
-   "date_execution": "2023-11-15",
-   "parsed": {
-    "verbatim": "P 15 min 07h-18h LUN. AU VEN.",
-    "normalized": "P 15 MIN 07H-18H LUN. AU VEN.",
-    "kind": "other",
-    "window": null,
-    "exception": null,
-    "confidence": null,
-    "code_rpa": "PV-DB",
-    "code_agrees": null,
-    "notes": [
-     "Not a cleaning sign (time limit / school / loading / other family)."
-    ]
-   }
-  },
-  {
    "poteau_id": "75042",
    "position": "6",
    "panneau_id": "1849299",
@@ -712,6 +695,37 @@
    }
   },
   {
+   "poteau_id": "75019",
+   "position": "6",
+   "panneau_id": "1849304",
+   "code_rpa": "PV-DB",
+   "fleche_pan": "3",
+   "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.",
+   "lat": 45.497716,
+   "lon": -73.586902,
+   "distance_to_centreline_m": 6.6,
+   "cross_track_m": -6.6,
+   "side": "NW",
+   "segment": 26,
+   "along_track_from_home_block_m": -0.0,
+   "poteau_version": "11",
+   "date_conception": "2023-10-24",
+   "date_execution": "2023-11-15",
+   "parsed": {
+    "verbatim": "P 15 min 07h-18h LUN. AU VEN.",
+    "normalized": "P 15 MIN 07H-18H LUN. AU VEN.",
+    "kind": "other",
+    "window": null,
+    "exception": null,
+    "confidence": null,
+    "code_rpa": "PV-DB",
+    "code_agrees": null,
+    "notes": [
+     "Not a cleaning sign (time limit / school / loading / other family)."
+    ]
+   }
+  },
+  {
    "poteau_id": "75020",
    "position": "7",
    "panneau_id": "1994991",
@@ -736,37 +750,6 @@
     "exception": null,
     "confidence": null,
     "code_rpa": "PV-DB",
-    "code_agrees": null,
-    "notes": [
-     "Not a cleaning sign (time limit / school / loading / other family)."
-    ]
-   }
-  },
-  {
-   "poteau_id": "234006",
-   "position": "3",
-   "panneau_id": "2055196",
-   "code_rpa": "PV-PB",
-   "fleche_pan": "3",
-   "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.",
-   "lat": 45.498004,
-   "lon": -73.586505,
-   "distance_to_centreline_m": 5.3,
-   "cross_track_m": 5.3,
-   "side": "SE",
-   "segment": 24,
-   "along_track_from_home_block_m": -42.8,
-   "poteau_version": "7",
-   "date_conception": "2026-02-02",
-   "date_execution": "2026-03-03",
-   "parsed": {
-    "verbatim": "P 02h 09h-18h LUN. AU VEN.",
-    "normalized": "P 02H 09H-18H LUN. AU VEN.",
-    "kind": "other",
-    "window": null,
-    "exception": null,
-    "confidence": null,
-    "code_rpa": "PV-PB",
     "code_agrees": null,
     "notes": [
      "Not a cleaning sign (time limit / school / loading / other family)."
@@ -849,6 +832,37 @@
     "code_rpa": "SB-JU-A",
     "code_agrees": true,
     "notes": []
+   }
+  },
+  {
+   "poteau_id": "234006",
+   "position": "3",
+   "panneau_id": "2055196",
+   "code_rpa": "PV-PB",
+   "fleche_pan": "3",
+   "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.",
+   "lat": 45.498004,
+   "lon": -73.586505,
+   "distance_to_centreline_m": 5.3,
+   "cross_track_m": 5.3,
+   "side": "SE",
+   "segment": 24,
+   "along_track_from_home_block_m": -42.8,
+   "poteau_version": "7",
+   "date_conception": "2026-02-02",
+   "date_execution": "2026-03-03",
+   "parsed": {
+    "verbatim": "P 02h 09h-18h LUN. AU VEN.",
+    "normalized": "P 02H 09H-18H LUN. AU VEN.",
+    "kind": "other",
+    "window": null,
+    "exception": null,
+    "confidence": null,
+    "code_rpa": "PV-PB",
+    "code_agrees": null,
+    "notes": [
+     "Not a cleaning sign (time limit / school / loading / other family)."
+    ]
    }
   },
   {
@@ -1008,37 +1022,6 @@
   },
   {
    "poteau_id": "75038",
-   "position": "5",
-   "panneau_id": "1001465",
-   "code_rpa": "PV-PB",
-   "fleche_pan": "2",
-   "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.",
-   "lat": 45.498306,
-   "lon": -73.586266,
-   "distance_to_centreline_m": 5.7,
-   "cross_track_m": 5.7,
-   "side": "SE",
-   "segment": 20,
-   "along_track_from_home_block_m": -81.0,
-   "poteau_version": "7",
-   "date_conception": "2014-01-09",
-   "date_execution": "2014-01-09",
-   "parsed": {
-    "verbatim": "P 02h 09h-18h LUN. AU VEN.",
-    "normalized": "P 02H 09H-18H LUN. AU VEN.",
-    "kind": "other",
-    "window": null,
-    "exception": null,
-    "confidence": null,
-    "code_rpa": "PV-PB",
-    "code_agrees": null,
-    "notes": [
-     "Not a cleaning sign (time limit / school / loading / other family)."
-    ]
-   }
-  },
-  {
-   "poteau_id": "75038",
    "position": "6",
    "panneau_id": "1001464",
    "code_rpa": "SB-JU-A",
@@ -1085,33 +1068,33 @@
    }
   },
   {
-   "poteau_id": "237657",
-   "position": "6",
-   "panneau_id": "1842315",
-   "code_rpa": "SD-TT",
-   "fleche_pan": "3",
+   "poteau_id": "75038",
+   "position": "5",
+   "panneau_id": "1001465",
+   "code_rpa": "PV-PB",
+   "fleche_pan": "2",
    "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.",
-   "lat": 45.498319,
-   "lon": -73.586455,
-   "distance_to_centreline_m": 8.0,
-   "cross_track_m": -8.0,
-   "side": "NW",
+   "lat": 45.498306,
+   "lon": -73.586266,
+   "distance_to_centreline_m": 5.7,
+   "cross_track_m": 5.7,
+   "side": "SE",
    "segment": 20,
-   "along_track_from_home_block_m": -75.3,
-   "poteau_version": "3",
-   "date_conception": "2023-10-05",
-   "date_execution": "2023-11-03",
+   "along_track_from_home_block_m": -81.0,
+   "poteau_version": "7",
+   "date_conception": "2014-01-09",
+   "date_execution": "2014-01-09",
    "parsed": {
-    "verbatim": "\\P EN TOUT TEMPS",
-    "normalized": "\\P EN TOUT TEMPS",
-    "kind": "permanent_ban",
+    "verbatim": "P 02h 09h-18h LUN. AU VEN.",
+    "normalized": "P 02H 09H-18H LUN. AU VEN.",
+    "kind": "other",
     "window": null,
     "exception": null,
     "confidence": null,
-    "code_rpa": "SD-TT",
+    "code_rpa": "PV-PB",
     "code_agrees": null,
     "notes": [
-     "No-parking at all times (\\P family). Scope is set by the sign's arrow (FLECHE_PAN, undecodable) — a whole-side ban is not asserted from this panel alone."
+     "Not a cleaning sign (time limit / school / loading / other family)."
     ]
    }
   },
@@ -1147,33 +1130,33 @@
    }
   },
   {
-   "poteau_id": "157098",
-   "position": "5",
-   "panneau_id": "1841987",
-   "code_rpa": "PE-JB",
+   "poteau_id": "237657",
+   "position": "6",
+   "panneau_id": "1842315",
+   "code_rpa": "SD-TT",
    "fleche_pan": "3",
    "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.",
-   "lat": 45.498418,
-   "lon": -73.586377,
-   "distance_to_centreline_m": 7.8,
-   "cross_track_m": -7.8,
+   "lat": 45.498319,
+   "lon": -73.586455,
+   "distance_to_centreline_m": 8.0,
+   "cross_track_m": -8.0,
    "side": "NW",
    "segment": 20,
-   "along_track_from_home_block_m": -87.8,
-   "poteau_version": "6",
-   "date_conception": "2023-10-04",
-   "date_execution": "2023-10-18",
+   "along_track_from_home_block_m": -75.3,
+   "poteau_version": "3",
+   "date_conception": "2023-10-05",
+   "date_execution": "2023-11-03",
    "parsed": {
-    "verbatim": "P 15 MIN. 07h30-17h JOURS D`ECOLE",
-    "normalized": "P 15 MIN. 07H30-17H JOURS D'ECOLE",
-    "kind": "other",
+    "verbatim": "\\P EN TOUT TEMPS",
+    "normalized": "\\P EN TOUT TEMPS",
+    "kind": "permanent_ban",
     "window": null,
     "exception": null,
     "confidence": null,
-    "code_rpa": "PE-JB",
+    "code_rpa": "SD-TT",
     "code_agrees": null,
     "notes": [
-     "Not a cleaning sign (time limit / school / loading / other family)."
+     "No-parking at all times (\\P family). Scope is set by the sign's arrow (FLECHE_PAN, undecodable) — a whole-side ban is not asserted from this panel alone."
     ]
    }
   },
@@ -1205,6 +1188,37 @@
     "code_agrees": null,
     "notes": [
      "No-parking at all times (\\P family). Scope is set by the sign's arrow (FLECHE_PAN, undecodable) — a whole-side ban is not asserted from this panel alone."
+    ]
+   }
+  },
+  {
+   "poteau_id": "157098",
+   "position": "5",
+   "panneau_id": "1841987",
+   "code_rpa": "PE-JB",
+   "fleche_pan": "3",
+   "fleche_note": "FLECHE_PAN semantics unknown — no codebook found (web search + dataset resources + empirical pairing analysis); recorded verbatim, never used to disambiguate, never assumed to mean both directions.",
+   "lat": 45.498418,
+   "lon": -73.586377,
+   "distance_to_centreline_m": 7.8,
+   "cross_track_m": -7.8,
+   "side": "NW",
+   "segment": 20,
+   "along_track_from_home_block_m": -87.8,
+   "poteau_version": "6",
+   "date_conception": "2023-10-04",
+   "date_execution": "2023-10-18",
+   "parsed": {
+    "verbatim": "P 15 MIN. 07h30-17h JOURS D`ECOLE",
+    "normalized": "P 15 MIN. 07H30-17H JOURS D'ECOLE",
+    "kind": "other",
+    "window": null,
+    "exception": null,
+    "confidence": null,
+    "code_rpa": "PE-JB",
+    "code_agrees": null,
+    "notes": [
+     "Not a cleaning sign (time limit / school / loading / other family)."
     ]
    }
   },
