@@ -91,9 +91,9 @@
  },
  "sides": {
   "even": {
-   "label": "Even numbers — 4610 side (Gauche)",
-   "short_label": "4610 side — even",
-   "button_html": "4610 side — even numbers<small>Gauche · 4608–4746</small>",
+   "label": "Even numbers side",
+   "short_label": "Even numbers side",
+   "button_html": "Even numbers side",
    "permanent_ban_note": "1 no-stopping panel(s) (\\A EN TOUT TEMPS) also stand on this side.",
    "permanent_ban_signs": [
     {
@@ -177,9 +177,9 @@
    ]
   },
   "odd": {
-   "label": "Odd numbers (Droite)",
-   "short_label": "Odd numbers",
-   "button_html": "Across the street — odd numbers<small>Droite · 4601–4777</small>",
+   "label": "Odd numbers side",
+   "short_label": "Odd numbers side",
+   "button_html": "Odd numbers side",
    "permanent_ban_note": null,
    "permanent_ban_signs": [],
    "status": "ambiguous",

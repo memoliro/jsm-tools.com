@@ -92,9 +92,9 @@
  },
  "sides": {
   "even": {
-   "label": "Even numbers — 5950 side (Gauche)",
-   "short_label": "5950 side — even",
-   "button_html": "5950 side — even numbers<small>Gauche · 5950–6002</small>",
+   "label": "Even numbers side",
+   "short_label": "Even numbers side",
+   "button_html": "Even numbers side",
    "permanent_ban_note": null,
    "permanent_ban_signs": [],
    "status": "not_established",
@@ -102,9 +102,9 @@
    "reason": "No cleaning sign for this side passed the segment + band + intersection checks in the city's signage data. Cleaning signs attributed to this side in the segment: 0. The data may be incomplete."
   },
   "odd": {
-   "label": "Odd numbers (Droite)",
-   "short_label": "Odd numbers",
-   "button_html": "Across the street — odd numbers<small>Droite · 6001–6025</small>",
+   "label": "Odd numbers side",
+   "short_label": "Odd numbers side",
+   "button_html": "Odd numbers side",
    "permanent_ban_note": null,
    "permanent_ban_signs": [],
    "status": "not_established",
