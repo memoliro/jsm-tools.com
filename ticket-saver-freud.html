@@ -22,7 +22,7 @@
   }
   body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
          margin: 0; padding: 16px; background: var(--page); color: var(--ink);
-         font-size: 18px; line-height: 1.5; touch-action: pan-y; }
+         font-size: 18px; line-height: 1.5; touch-action: pan-y; text-align: center; }
   .wrap { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column;
           min-height: calc(100vh - 32px); min-height: calc(100dvh - 32px); }
   h1 { font-size: 26px; margin: 4px 0 2px 0; line-height: 1.2; }
@@ -35,6 +35,7 @@
   .parked { background: var(--soft-green); border: 1px solid #bfe6cf; color: #14532d;
             border-radius: 12px; padding: 12px 14px; font-size: 18px; margin-bottom: 10px;
             display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .parked span:first-child { flex: 1; text-align: center; }
   .parked .change { font-size: 18px; font-weight: 700; text-decoration: none; padding: 2px 8px; }
   .label { color: var(--muted); font-size: 16px; }
   .big { font-size: 34px; font-weight: 800; line-height: 1.15; }
@@ -44,7 +45,7 @@
   #heroCard.next .big, #heroCard.next .count { font-size: 26px; }
   .now { background: var(--now-bg); border-color: #f3c98f; }
   .now .count, .now .big { color: var(--now-ink); }
-  .sidebtn { display: block; width: 100%; text-align: left; background: var(--card);
+  .sidebtn { display: block; width: 100%; text-align: center; background: var(--card);
              border: 2px solid var(--line); border-radius: 14px; padding: 14px;
              font-size: 20px; font-weight: 700; color: var(--ink); cursor: pointer;
              margin-bottom: 12px; font-family: inherit; line-height: 1.3; }
@@ -88,17 +89,23 @@
              box-shadow: inset 2px 0 0 var(--accent); }
   .limitrow { display: flex; justify-content: space-between; align-items: center; gap: 10px;
              width: 100%; background: none; border: 0; padding: 0; font-size: 18px; font-weight: 700;
-             color: var(--ink); cursor: pointer; font-family: inherit; text-align: left; }
+             color: var(--ink); cursor: pointer; font-family: inherit; }
+  .limitrow #limitToggleText { flex: 1; text-align: center; }
   .limitrow .chev { color: var(--muted); font-size: 20px; display: inline-block; }
   .limitrow.open .chev { transform: rotate(90deg); }
   .limitrow:hover .chev, .limitrow:focus-visible .chev { color: var(--accent); }
   .limitrow:focus-visible { outline: none; }
   .gpsrow { display: flex; justify-content: space-between; align-items: center; gap: 10px;
            width: 100%; background: none; border: 0; padding: 8px 4px; font-size: 17px;
-           color: var(--muted); cursor: pointer; font-family: inherit; text-align: left; }
+           color: var(--muted); cursor: pointer; font-family: inherit; }
+  .gpsrow #gpsStatus { flex: 1; text-align: center; }
   .gpsrow:hover, .gpsrow:focus-visible { background: var(--soft-green); color: var(--ink);
            border-radius: 8px; outline: none; }
   .gpsrow .gpsrefresh { color: var(--accent); font-size: 20px; }
+  /* The refresh glyph was the U+21BB circular arrow — the Tesla browser has no
+     such glyph and renders a missing-glyph box, so the icon is an inline SVG
+     (Feather rotate-cw), which renders on any font. */
+  .gpsrefresh svg { display: block; }
   #dotsNav { display: flex; justify-content: center; align-items: center; gap: 10px;
              margin-top: auto; padding-top: 10px; }
   .dot { width: 28px; height: 28px; border: 0; background: none; cursor: pointer;
@@ -154,7 +161,7 @@
     </div>
   </div>
 
-  <button class="gpsrow" id="gpsBtn"><span id="gpsStatus">&#128205; Checking location&hellip;</span><span class="gpsrefresh" aria-hidden="true">&#8635;</span></button>
+  <button class="gpsrow" id="gpsBtn"><span id="gpsStatus">&#128205; Checking location&hellip;</span><span class="gpsrefresh" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg></span></button>
   </div><!-- /mainView -->
 
   <div id="detailsView" class="hidden">
