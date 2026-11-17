@@ -916,12 +916,17 @@ function reverseGeocode(lat, lon, cb) {
 function renderGpsRow() {
   var st = el("gpsStatus");
   if (!lastFix) return;
-  if (geoLookup && geoLookup.label) { st.textContent = "📍 " + geoLookup.label; return; }
+  /* The fix's accuracy is printed so a rough fix reads as rough: indoors the
+     phone can be off by hundreds of metres and the street name follows the
+     fix, not the car — "Cavendish, 6000 (±350 m)" says so, a bare street
+     name does not. */
+  var acc = (typeof lastFix.accuracy === "number") ? " (±" + Math.round(lastFix.accuracy) + " m)" : "";
+  if (geoLookup && geoLookup.label) { st.textContent = "📍 " + geoLookup.label + acc; return; }
   if (lastFix.dist <= 30) {
-    st.textContent = "📍 " + lastFix.homeDist + " m from home";
+    st.textContent = "📍 " + lastFix.homeDist + " m from home" + acc;
   } else {
     st.textContent = "📍 " + Math.round(lastFix.dist)
-      + " m from " + DATA.street.short_name + " — home block (" + DATA.street.address_number + ")";
+      + " m from " + DATA.street.short_name + " — home block (" + DATA.street.address_number + ")" + acc;
   }
 }
 function checkGps() {
