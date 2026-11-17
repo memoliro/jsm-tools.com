@@ -441,6 +441,7 @@ function anchorLimitStart(nowMs) {
    "I just parked"). Pure except for the localStorage read. */
 function maybeAutoArmLimit(nowMs) {
   if (getLimitTimer()) return null;
+  if (!getSelectedSide()) return null; /* no side picked = he never said he parked here */
   var lim = (typeof DATA !== "undefined" && DATA) ? DATA.limit : null;
   if (!lim || !lim.days || !lim.start || !lim.end) return null;
   var p = tzParts(new Date(nowMs));
