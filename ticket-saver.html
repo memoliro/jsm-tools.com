@@ -818,6 +818,62 @@ function maybeSwitchStreet(lat, lon, accuracy) {
   location.replace(url);
 }
 
+/* Street name on screen (his call Nov 17: "I moved to another area, and would
+   like to see street name on screen"). After a GPS fix, the page asks Photon
+   (Komoot, OpenStreetMap data, free, no key) to name the street at the fix.
+   Photon returns the street + house number of the nearest feature; the row
+   shows that instead of the distance from this page's street. If the lookup
+   fails (offline, rate-limited) the row keeps the old distance text — the
+   street name is a display nicety, never a gate for the countdown or the
+   street switch. Lookups are cached: a fix within 50 m of the last lookup
+   reuses it, and at most one lookup runs per 10 s. */
+var lastFix = null; /* { lat, lon, dist, homeDist, accuracy } */
+var geoLookup = null; /* { lat, lon, label, at } */
+function photonLabel(props) {
+  if (!props) return null;
+  /* only a real street counts: a building/area name is not a street, and a
+     city name must never be shown as if it were one */
+  var street = props.street || (props.type === "street" ? props.name : null);
+  if (!street) return null;
+  return props.housenumber ? street + ", " + props.housenumber : street;
+}
+function parsePhoton(data) {
+  if (!data || !data.features || !data.features.length) return null;
+  return photonLabel(data.features[0].properties);
+}
+function geoNeedsLookup(lat, lon, now) {
+  if (!geoLookup) return true;
+  if (now - geoLookup.at < 10000) return false;
+  return streetDistM(lat, lon, { lat: geoLookup.lat, lon: geoLookup.lon }) > 50;
+}
+function reverseGeocode(lat, lon) {
+  if (typeof fetch === "undefined") return;
+  var now = Date.now();
+  if (!geoNeedsLookup(lat, lon, now)) return;
+  geoLookup = { lat: lat, lon: lon, label: geoLookup ? geoLookup.label : null, at: now };
+  fetch("https://photon.komoot.io/reverse?lon=" + lon.toFixed(6) + "&lat=" + lat.toFixed(6))
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      var label = parsePhoton(data);
+      /* only apply if no newer lookup has started since (a stale label must
+         never overwrite a newer fix's street) */
+      if (label && geoLookup && geoLookup.lat === lat && geoLookup.lon === lon) {
+        geoLookup.label = label; renderGpsRow();
+      }
+    })
+    .catch(function () { /* keep the distance text */ });
+}
+function renderGpsRow() {
+  var st = el("gpsStatus");
+  if (!lastFix) return;
+  if (geoLookup && geoLookup.label) { st.textContent = "📍 " + geoLookup.label; return; }
+  if (lastFix.dist <= 30) {
+    st.textContent = "📍 " + lastFix.homeDist + " m from home";
+  } else {
+    st.textContent = "📍 " + Math.round(lastFix.dist)
+      + " m from des Pins Ouest — home block (1558)";
+  }
+}
 function checkGps() {
   var st = el("gpsStatus");
   if (!("geolocation" in navigator)) {
@@ -828,13 +884,11 @@ function checkGps() {
   navigator.geolocation.getCurrentPosition(function (pos) {
     var s = snap(pos.coords.latitude, pos.coords.longitude);
     var hp = toXY(pos.coords.latitude, pos.coords.longitude);
-    var homeDist = Math.round(Math.sqrt(hp[0] * hp[0] + hp[1] * hp[1]));
-    if (s.dist <= 30) {
-      st.textContent = "📍 " + homeDist + " m from home";
-    } else {
-      st.textContent = "📍 " + Math.round(s.dist)
-        + " m from des Pins Ouest — home block (1558)";
-    }
+    lastFix = { lat: pos.coords.latitude, lon: pos.coords.longitude, dist: s.dist,
+                homeDist: Math.round(Math.sqrt(hp[0] * hp[0] + hp[1] * hp[1])),
+                accuracy: pos.coords.accuracy };
+    renderGpsRow();
+    reverseGeocode(pos.coords.latitude, pos.coords.longitude);
     maybeSwitchStreet(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
   }, function () {
     st.textContent = "📍 Location unavailable — home block (1558)";
@@ -980,6 +1034,16 @@ function init() {
     else if (t === "main") showMain();
   });
   checkGps();
+  /* The row must not show the previous position after he moves: re-check when
+     the page becomes visible again, and every 90 s while it stays visible. */
+  if (typeof document !== "undefined" && document.addEventListener) {
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) checkGps();
+    });
+  }
+  setInterval(function () {
+    if (typeof document === "undefined" || !document.hidden) checkGps();
+  }, 90000);
   setInterval(function () {
     renderHero();
     try { renderLimit(); } catch (e) { /* a timer fault must never swallow the hero tick */ }
@@ -1005,6 +1069,10 @@ if (typeof window !== "undefined") {
     keyTarget: keyTarget, limitRowLabel: limitRowLabel,
     setSelectedSide: setSelectedSide, getSelectedSide: getSelectedSide, toggleParked: toggleParked,
     shouldSwitchStreet: shouldSwitchStreet, currentSlug: currentSlug,
+    parsePhoton: parsePhoton, photonLabel: photonLabel, geoNeedsLookup: geoNeedsLookup,
+    renderGpsRow: renderGpsRow,
+    _setGpsState: function (fix, lookup) { lastFix = fix; geoLookup = lookup; },
+    _getGpsState: function () { return { fix: lastFix, lookup: geoLookup }; },
     currentView: function () { return view; } };
 }
 </script>
