@@ -63,7 +63,18 @@
    }
   ],
   "centreline_source": "OpenStreetMap via Overpass API, 2026-11-16 (see ticket-saver-gps/centerline.json)",
-  "centreline_note": "Some ways carry placement=middle_of:1 — the mapped line may sit ~1 m off the true road centre. The 3-10 m band leaves margin for this; no calibration offset was applied (no ground truth yet)."
+  "centreline_note": "Some ways carry placement=middle_of:1 — the mapped line may sit ~1 m off the true road centre. The 3-10 m band leaves margin for this; no calibration offset was applied (no ground truth yet).",
+  "slug": "des-pins",
+  "short_name": "des Pins Ouest",
+  "address_number": "1558",
+  "along_negative_label": "NE",
+  "along_positive_label": "SW",
+  "ct_mapping_note": "Centreline ordered NE->SW. Cross-track sign: + = SE side (1558 side), - = NW side.",
+  "verification_banner_html": "<b>Verified on my side.</b> The window was checked against a photo of the physical sign on Nov 16, 2026, and the 7–8 AM sign at the far end of the block belongs to Chemin de la Côte-des-Neiges, not this street. The other side is still unverified, and the full block has not been walked yet. <b>Always check the sign where you park.</b>",
+  "segment_note": "Joined to street segment ID_TRC 1260585 (Rue McGregor to Chemin de la Côte-des-Neiges) from signs 3–10&nbsp;m off the road centreline; a window counts as established only when two or more poles carry the identical sign. Season Apr 1 – Dec 1 <b>inclusive</b>. Arrow codes on the signs (FLECHE_PAN) are not decoded in the open data, so no arrow is assumed to mean both directions. Centreline: OpenStreetMap contributors (ODbL). Times are America/Toronto.",
+  "permit_note_html": "Resident permits: the photographed SE sign also carries “EXCEPTÉ VÉHICULES MUNIS D’UN PERMIS, SECTEUR 41” — that plate exempts the 2-hour limit only, not the cleaning ban; during the cleaning window permit holders must still move the car.",
+  "default_side": "SE",
+  "gps_rows_note": "~7&nbsp;m"
  },
  "method": {
   "band_m": [
@@ -85,7 +96,7 @@
  "sides": {
   "SE": {
    "status": "established",
-   "label": "My side — 1558, even numbers (toward downtown)",
+   "label": "Even numbers side",
    "windows": [
     {
      "weekdays_iso": [
@@ -161,11 +172,13 @@
      "lat": 45.498306,
      "lon": -73.586266
     }
-   ]
+   ],
+   "button_html": "Even numbers side<small>toward downtown</small>",
+   "field_photos": null
   },
   "NW": {
    "status": "not_established",
-   "label": "Across the street — odd numbers (toward Mount Royal)",
+   "label": "Odd numbers side",
    "windows": [],
    "reason": "No cleaning sign for this side passed the segment + band + intersection checks in the city's signage data. Cleaning signs attributed to this side in the segment: 0. The data may be incomplete.",
    "permanent_ban_note": "5 no-parking-at-all-times panel(s) (\\P EN TOUT TEMPS) stand on this side in the data — but each panel's reach is set by its arrow (FLECHE_PAN, undecodable), so the data cannot say whether they cover the whole side or only short stretches. 3 no-stopping panel(s) (\\A EN TOUT TEMPS) also stand on this side.",
@@ -210,7 +223,9 @@
      "lat": 45.498418,
      "lon": -73.586377
     }
-   ]
+   ],
+   "button_html": "Odd numbers side<small>toward Mount Royal</small>",
+   "field_photos": null
   }
  },
  "limits": {

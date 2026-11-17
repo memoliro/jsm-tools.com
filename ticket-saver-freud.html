@@ -154,8 +154,8 @@
   </div>
 
   <div class="card" id="pickCard">
-    <button class="sidebtn" id="btnEven">Even numbers side</button>
-    <button class="sidebtn" id="btnOdd">Odd numbers side</button>
+    <button class="sidebtn" id="btnSide0"></button>
+    <button class="sidebtn" id="btnSide1"></button>
   </div>
 
   <div class="card" id="limitCard">
@@ -215,7 +215,7 @@
   <div class="card">
     <div class="label">Location</div>
     <div style="font-size:17px;margin-top:4px">GPS can&rsquo;t tell the sides apart on this street
-    (the two parking rows are only a few metres apart) — that&rsquo;s why you tap. This confirms the street, not the side. Your choice is saved on this device only.</div>
+    (the two parking rows are only <span id="gpsRowsNote">a few metres</span> apart) — that&rsquo;s why you tap. This confirms the street, not the side. Your choice is saved on this device only.</div>
   </div>
 
   <div class="card foot">
@@ -223,6 +223,7 @@
     <span id="segmentNote"></span></div>
     <div style="margin-top:8px">Cleaning only. Winter snow removal is separate — infoneige.ca already covers it.
     No-stopping panels (\A EN TOUT TEMPS) are a stopping ban, not a cleaning window.</div>
+    <div id="permitNote" class="hidden" style="margin-top:8px"></div>
   </div>
 
   <div class="card">
@@ -246,10 +247,20 @@ var DATA = {"app": "Ticket Saver v1 (cleaning only)", "generated_date": "2026-11
    Cross-track sign is relative to the centreline point order (see
    street.ct_mapping_note in the data). */
 var CENTERLINE = [[45.4784252, -73.670308], [45.4784507, -73.6703811], [45.4784649, -73.6704206], [45.479002, -73.6718393], [45.4791095, -73.6721122], [45.4791788, -73.6722868], [45.4793022, -73.6725961], [45.4793598, -73.672746], [45.4793721, -73.6727896], [45.4793813, -73.6728268], [45.4793859, -73.672852], [45.4793905, -73.6728786]];
+/* The side picker buttons are neutral (btnSide0/btnSide1) — side keys,
+   labels and click targets all come from DATA, so one template serves
+   every street, whatever its side keys are. */
+var SIDE_KEYS = Object.keys(DATA.sides);
+function sideButtonEl(key) {
+  var keys = (typeof liveMode === "function" && liveMode()) ? ["even", "odd"] : SIDE_KEYS;
+  var i = keys.indexOf(key);
+  return i < 0 ? null : el("btnSide" + i);
+}
+function sideButtonElByIndex(i) { return el("btnSide" + i); }
 var HOME_LAT = DATA.street.home.lat, HOME_LON = DATA.street.home.lon;
 var TZ = "America/Toronto";
 var LS_KEY = "ticketSaver.side." + DATA.street.slug + ".v1";
-var PARKED_DEFAULT_SIDE = "even"; /* the "Parked" tap parks on the even side; the picker below switches sides */
+var PARKED_DEFAULT_SIDE = DATA.street.default_side || SIDE_KEYS[0]; /* the "Parked" tap parks on the street's default side (its reference address); the picker below switches sides */
 var DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 var DAY_SHORT = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 var MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -575,8 +586,7 @@ function esc(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 function sideLabel(key) {
-  if (liveMode()) return key === "even" ? "Even numbers side" : "Odd numbers side";
-  var s = liveActiveSides()[key]; return s ? s.short_label : key;
+  var s = liveActiveSides()[key]; return s ? s.label : key;
 }
 
 function renderSideCards() {
@@ -1071,21 +1081,48 @@ function setPlanOpen(open) {
   }
 }
 
+/* One-time migration (unification Nov 17): before the unification, sides
+   were saved under the legacy key "ticketSaver.side.v1" (no slug). If the
+   slug key is empty and the legacy key holds a value, copy it over and
+   delete the legacy key. The value is validated against THIS street's sides
+   first: a value saved on another street must NOT be copied into this
+   street's key — the saved side on the other street would be lost forever
+   when the legacy key is deleted. After this the legacy key is dead —
+   nothing reads it. Every user has a home address; no street is special-cased. */
+var LEGACY_SIDE_KEY = "ticketSaver.side.v1";
+function migrateLegacySideKey() {
+  try {
+    var legacyVal = localStorage.getItem(LEGACY_SIDE_KEY);
+    if (!localStorage.getItem(LS_KEY) && legacyVal && SIDE_KEYS.indexOf(legacyVal) >= 0) {
+      localStorage.setItem(LS_KEY, legacyVal);
+      localStorage.removeItem(LEGACY_SIDE_KEY);
+    }
+  } catch (e) { /* private mode — selection just won't persist */ }
+}
+
 function renderAll() {
+  migrateLegacySideKey();
   var a2 = document.querySelectorAll(".asOf2");
   for (var i = 0; i < a2.length; i++) a2[i].textContent = DATA.data_as_of;
   /* Street-specific strings come from the data file, never hardcoded. */
   if (typeof document !== "undefined" && document.title !== undefined) {
     document.title = "Ticket Saver — street cleaning, " + DATA.street.short_name;
   }
-  ["even", "odd"].forEach(function (key) {
-    var b = el(key === "even" ? "btnEven" : "btnOdd");
+  SIDE_KEYS.forEach(function (key, i) {
+    var b = el("btnSide" + i);
     if (b && DATA.sides[key]) b.innerHTML = DATA.sides[key].button_html;
   });
   var vb = el("verifyBanner");
   if (vb) vb.innerHTML = DATA.street.verification_banner_html;
   var sn = el("segmentNote");
   if (sn) sn.innerHTML = DATA.street.segment_note;
+  var gr = el("gpsRowsNote");
+  if (gr) gr.innerHTML = DATA.street.gps_rows_note || "a few metres";
+  var pn = el("permitNote");
+  if (pn) {
+    if (DATA.street.permit_note_html) { pn.innerHTML = DATA.street.permit_note_html; pn.classList.remove("hidden"); }
+    else { pn.innerHTML = ""; pn.classList.add("hidden"); }
+  }
   renderSideCards();
   renderHero();
   renderLimit();
@@ -1318,8 +1355,10 @@ function init() {
   /* A running timer must not hide behind the collapsed tiles. */
   if (getLimitTimer()) setLimitOpen(true);
   try { if (localStorage.getItem(SWIPED_KEY) === "1") el("swipeHint").classList.add("hidden"); } catch (e) { /* private mode */ }
-  el("btnEven").addEventListener("click", function () { setSelectedSide("even"); });
-  el("btnOdd").addEventListener("click", function () { setSelectedSide("odd"); });
+  SIDE_KEYS.forEach(function (key, i) {
+    var b = el("btnSide" + i);
+    if (b) b.addEventListener("click", function () { setSelectedSide(key); });
+  });
   el("clearSide").addEventListener("click", function () { setSelectedSide(null); });
   el("parkedToggle").addEventListener("click", function () { toggleParked(); });
   el("gpsBtn").addEventListener("click", checkGps);
@@ -1968,7 +2007,7 @@ function liveActiveSides() {
 }
 function liveActiveSideKeys() {
   if (liveMode()) return ["even", "odd"];
-  if (typeof DATA !== "undefined" && DATA && DATA.sides && DATA.sides.SE) return ["SE", "NW"];
+  if (typeof DATA !== "undefined" && DATA && DATA.sides) return Object.keys(DATA.sides);
   return ["even", "odd"];
 }
 function liveDefaultSide() { return liveMode() ? "even" : PARKED_DEFAULT_SIDE; }
@@ -1977,10 +2016,9 @@ function liveSideKey() {
   return null;
 }
 function liveSideButtonEl(sideKey) {
-  if (sideKey === "even") return el("btnEven") || el("btnSE");
-  if (sideKey === "odd") return el("btnOdd") || el("btnNW");
-  if (sideKey === "SE") return el("btnSE");
-  if (sideKey === "NW") return el("btnNW");
+  /* The unified template maps side keys to the neutral picker buttons
+     (btnSide0/btnSide1) — keys, labels and clicks all come from DATA. */
+  if (typeof sideButtonEl === "function") return sideButtonEl(sideKey);
   return null;
 }
 function liveMarkSideButtons(key) {
@@ -2033,8 +2071,8 @@ function liveRenderChrome() {
     liveOrig = { title: (document.title !== undefined) ? document.title : "",
       banner: (function () { var b = el("verifyBanner"); return b ? b.innerHTML : null; })(),
       segment: (function () { var s = el("segmentNote"); return s ? s.innerHTML : null; })(),
-      btnEven: (function () { var b = el("btnEven") || el("btnSE"); return b ? b.innerHTML : null; })(),
-      btnOdd: (function () { var b = el("btnOdd") || el("btnNW"); return b ? b.innerHTML : null; })() };
+      btn0: (function () { var b = (typeof sideButtonElByIndex === "function") ? sideButtonElByIndex(0) : null; return b ? b.innerHTML : null; })(),
+      btn1: (function () { var b = (typeof sideButtonElByIndex === "function") ? sideButtonElByIndex(1) : null; return b ? b.innerHTML : null; })() };
   }
   var lb = el("liveBanner");
   if (!liveMode()) {
@@ -2043,10 +2081,10 @@ function liveRenderChrome() {
     if (vb0 && liveOrig.banner !== null) vb0.innerHTML = liveOrig.banner;
     var sn0 = el("segmentNote");
     if (sn0 && liveOrig.segment !== null) sn0.innerHTML = liveOrig.segment;
-    var be0 = el("btnEven") || el("btnSE");
-    if (be0 && liveOrig.btnEven !== null) be0.innerHTML = liveOrig.btnEven;
-    var bo0 = el("btnOdd") || el("btnNW");
-    if (bo0 && liveOrig.btnOdd !== null) bo0.innerHTML = liveOrig.btnOdd;
+    var be0 = (typeof sideButtonElByIndex === "function") ? sideButtonElByIndex(0) : null;
+    if (be0 && liveOrig.btn0 !== null) be0.innerHTML = liveOrig.btn0;
+    var bo0 = (typeof sideButtonElByIndex === "function") ? sideButtonElByIndex(1) : null;
+    if (bo0 && liveOrig.btn1 !== null) bo0.innerHTML = liveOrig.btn1;
     if (document.title !== undefined && liveOrig.title) document.title = liveOrig.title;
     return;
   }
@@ -2065,9 +2103,9 @@ function liveRenderChrome() {
   if (vb) vb.innerHTML = liveVerifyBannerHtml();
   var sn = el("segmentNote");
   if (sn) sn.innerHTML = liveSegmentNoteHtml();
-  var be = el("btnEven") || el("btnSE");
+  var be = (typeof sideButtonElByIndex === "function") ? sideButtonElByIndex(0) : null;
   if (be) be.innerHTML = "Even numbers side";
-  var bo = el("btnOdd") || el("btnNW");
+  var bo = (typeof sideButtonElByIndex === "function") ? sideButtonElByIndex(1) : null;
   if (bo) bo.innerHTML = "Odd numbers side";
   if (document.title !== undefined && LIVE.streetName) {
     document.title = "Ticket Saver \u2014 street cleaning, " + LIVE.streetName;
@@ -2369,6 +2407,8 @@ if (typeof window !== "undefined") {
     _setGpsState: function (fix, lookup) { lastFix = fix; geoLookup = lookup; },
     _getGpsState: function () { return { fix: lastFix, lookup: geoLookup }; },
     currentView: function () { return view; }, renderAll: renderAll, renderSideCards: renderSideCards,
+    sideButtonEl: sideButtonEl, sideButtonElByIndex: sideButtonElByIndex, SIDE_KEYS: SIDE_KEYS,
+    migrateLegacySideKey: migrateLegacySideKey, LEGACY_SIDE_KEY: LEGACY_SIDE_KEY,
     verdictForSide: verdictForSide, verdictForSideData: verdictForSideData,
     bindingDeadlineForSide: bindingDeadlineForSide, bindingDeadlineForSideData: bindingDeadlineForSideData,
     heroWarningState: heroWarningState, heroWarningStateForData: heroWarningStateForData,
