@@ -444,8 +444,8 @@ function alarmLeadMin(limitMin) { return limitMin <= 15 ? 5 : 10; }
 /* Pure state: { state: 'counting' | 'warning' | 'expired' | 'waiting', end, remainingMs, limitMin, parkedAt }.
    'waiting' = the timer is anchored to a future window start (parked overnight):
    the limit has not started running yet. */
-function limitState(parkedAtMs, limitMin, nowMs) {
-  var end = parkedAtMs + limitMin * 60000;
+function limitState(parkedAtMs, limitMin, nowMs, endMs) {
+  var end = (typeof endMs === "number") ? endMs : parkedAtMs + limitMin * 60000;
   var remaining = end - nowMs;
   var state = remaining <= 0 ? "expired"
     : (parkedAtMs > nowMs ? "waiting"
@@ -527,9 +527,7 @@ function clearLimitTimer() {
    before expiry. No RRULE — this is a one-time timer, not the recurring cleaning export. */
 function buildLimitIcs(parkedAtMs, limitMin, nowMs, endMs) {
   var start = new Date(parkedAtMs);
-  var rawEndMs = parkedAtMs + limitMin * 60000;
-  var end = new Date((typeof endMs === "number") ? endMs : rawEndMs);
-  var capped = (typeof endMs === "number") && endMs < rawEndMs;
+  var end = new Date((typeof endMs === "number") ? endMs : parkedAtMs + limitMin * 60000);
   var lead = alarmLeadMin(limitMin);
   var stamp = new Date(nowMs).toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
   var uid = "ticket-saver-limit-" + limitMin + "-" + icsDateLocal(start) + "@jsm-tools.com";
@@ -541,14 +539,10 @@ function buildLimitIcs(parkedAtMs, limitMin, nowMs, endMs) {
     "DTSTART;TZID=America/Toronto:" + icsDateLocal(start),
     "DTEND;TZID=America/Toronto:" + icsDateLocal(end),
     "SUMMARY:Ticket Saver — parking limit ends (" + LIMIT_LABELS[limitMin] + "), " + DATA.street.short_name,
-    "DESCRIPTION:" + icsEscape(capped
-      ? "The posted parking hours on " + DATA.street.name + " end at " + fmtTimeToronto(end) + ". After that, no time limit applies. One-time event from the Ticket Saver parking limit timer."
-      : "Parking limit of " + LIMIT_LABELS[limitMin] + " on " + DATA.street.name + " ends at "
-        + fmtTimeToronto(end) + ". Move the car before then. One-time event from the Ticket Saver parking limit timer."),
+    "DESCRIPTION:" + icsEscape("Parking limit of " + LIMIT_LABELS[limitMin] + " on " + DATA.street.name + " ends at "
+      + fmtTimeToronto(end) + ". Move the car before then. One-time event from the Ticket Saver parking limit timer."),
     "BEGIN:VALARM", "TRIGGER:-PT" + lead + "M", "ACTION:DISPLAY",
-    "DESCRIPTION:" + icsEscape(capped
-      ? "The posted parking hours on " + DATA.street.short_name + " end in " + lead + " minutes — after that, no time limit applies."
-      : "Move the car — your " + LIMIT_LABELS[limitMin] + " parking limit on " + DATA.street.short_name + " ends in " + lead + " minutes."),
+    "DESCRIPTION:" + icsEscape("Move the car — your " + LIMIT_LABELS[limitMin] + " parking limit on " + DATA.street.short_name + " ends in " + lead + " minutes."),
     "END:VALARM",
     "END:VEVENT", "END:VCALENDAR"
   ]);
@@ -736,16 +730,19 @@ function limitAdjective(minutes) {
 function limitExpiryMs(lim, parkedAtMs) {
   return anchorLimitStartFor(lim, parkedAtMs) + lim.minutes * 60000;
 }
-/* The posted hours end the limit (Phase 2 screenshot fix, Nov 17): the sign
-   reads "P 2h 9h-18h" — the 2-hour maximum runs only inside 09:00-18:00.
-   A car parked at 17:07 has its 2 hours run out of hours at 18:00, not at
-   19:07: after the close no limit binds, so the stay has no "move by"
-   deadline from the limit at all (the next binding rule is the cleaning
-   window). limitCloseMs is the close of the posted window on the anchor's
-   day; limitDeadlineMs is the limit's move-by deadline, or null when the
-   stay outruns the window. A stay anchored to a LATER window (overnight /
-   weekend park) is unaffected: its anchor is that window's open, so its
-   expiry falls inside the window and the deadline stands. */
+/* The posted hours end the limit — for TODAY (Phase 2 screenshot fix,
+   Nov 17, corrected the same evening on his word: "today is tuesday").
+   The sign reads "P 2h 9h-18h" — the 2-hour maximum runs only inside
+   09:00-18:00, so a car parked at 17:07 does NOT owe a move by 19:07. But
+   the limit does not vanish at the close: it comes back at 9:00 the next
+   limit day, with a fresh full stay from the open (the app's own anchor
+   rule for an overnight park). So a Tue 17:07 park must move by WED
+   11:00 AM — not "fine until Thu 5:30 PM" (that skips Wednesday, a limit
+   day) and not "move by Tue 7:07 PM". limitCloseMs is the close of the
+   posted window on the anchor's day; nextLimitOpenMs is the next window
+   open strictly after a moment; limitDeadlineMs is the limit's move-by
+   deadline: the expiry when it falls inside the window, else the next
+   open + the full stay. */
 function limitCloseMs(lim, parkedAtMs) {
   if (!lim || !lim.end) return null;
   var anchor = anchorLimitStartFor(lim, parkedAtMs);
@@ -753,12 +750,27 @@ function limitCloseMs(lim, parkedAtMs) {
   var p = tzParts(new Date(anchor));
   return torontoToUtc(p.y, p.mo, p.d, en.h, en.mi).getTime();
 }
+function nextLimitOpenMs(lim, afterMs) {
+  if (!lim || !lim.days || !lim.start || !lim.end) return null;
+  var st = parseHM(lim.start);
+  var p = tzParts(new Date(afterMs));
+  for (var i = 0; i < 8; i++) {
+    var d = new Date(Date.UTC(p.y, p.mo - 1, p.d + i));
+    var wd = d.getUTCDay();
+    if (lim.days.indexOf(wd) < 0) continue;
+    var open = torontoToUtc(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(), st.h, st.mi).getTime();
+    if (open > afterMs) return open;
+  }
+  return null;
+}
 function limitDeadlineMs(lim, parkedAtMs) {
   if (!lim || typeof lim.minutes !== "number") return null;
   var expiry = limitExpiryMs(lim, parkedAtMs);
   var close = limitCloseMs(lim, parkedAtMs);
   if (close === null) return expiry;
-  return expiry <= close ? expiry : null;
+  if (expiry <= close) return expiry;
+  var nextOpen = nextLimitOpenMs(lim, close);
+  return (nextOpen === null) ? null : nextOpen + lim.minutes * 60000;
 }
 function fmtDayTime(ms) {
   var p = tzParts(new Date(ms));
@@ -961,15 +973,8 @@ function renderHero() {
 function limitRowLabel(t, nowMs, lim) {
   if (!t) return "Parking limit timer";
   if (lim === undefined) lim = limitForSide();
-  if (lim) {
-    var dl = limitDeadlineMs(lim, t.parkedAt);
-    if (dl === null) {
-      var close = limitCloseMs(lim, t.parkedAt);
-      if (close !== null && nowMs >= close) return "No limit now";
-      if (close !== null) return fmtCountdown(close - nowMs) + " left · ends " + fmtTimeToronto(new Date(close));
-    }
-  }
-  var st = limitState(t.parkedAt, t.limitMin, nowMs);
+  var dl = lim ? limitDeadlineMs(lim, t.parkedAt) : null;
+  var st = limitState(t.parkedAt, t.limitMin, nowMs, dl);
   if (st.state === "expired") return "Limit reached";
   if (st.state === "waiting") return "Starts " + fmtTimeToronto(new Date(t.parkedAt)) + " · ends " + fmtTimeToronto(st.end);
   return fmtCountdown(st.remainingMs) + " left · ends " + fmtTimeToronto(st.end);
@@ -997,25 +1002,9 @@ function renderLimit() {
   running.classList.remove("hidden");
   var lim = limitForSide();
   var dl = lim ? limitDeadlineMs(lim, t.parkedAt) : null;
-  var close = lim ? limitCloseMs(lim, t.parkedAt) : null;
-  var warn = el("limitWarn");
-  if (lim && dl === null && close !== null) {
-    /* The stay outruns the posted hours: the limit ends at the window
-       close, and after the close no limit binds — so this is the limit
-       ending, not a "move the car" moment. */
-    if (Date.now() >= close) {
-      el("limitCount").textContent = "No limit now";
-      el("limitDetail").textContent = "The posted hours ended at " + fmtTimeToronto(new Date(close)) + ".";
-      warn.classList.add("hidden");
-    } else {
-      el("limitCount").textContent = fmtCountdown(close - Date.now()) + " left";
-      el("limitDetail").textContent = "Ends " + fmtTimeToronto(new Date(close)) + ".";
-      warn.classList.add("hidden");
-    }
-    return;
-  }
-  var st = limitState(t.parkedAt, t.limitMin, Date.now());
+  var st = limitState(t.parkedAt, t.limitMin, Date.now(), dl);
   el("limitDetail").textContent = "Ends " + fmtTimeToronto(st.end) + ".";
+  var warn = el("limitWarn");
   if (st.state === "expired") {
     el("limitCount").textContent = "Limit reached";
     warn.classList.remove("hidden");
@@ -2384,6 +2373,7 @@ if (typeof window !== "undefined") {
     heroWarningState: heroWarningState, heroWarningStateForData: heroWarningStateForData,
     limitForSideKey: limitForSideKey, anchorLimitStartFor: anchorLimitStartFor,
     limitExpiryMs: limitExpiryMs, limitDeadlineMs: limitDeadlineMs, limitCloseMs: limitCloseMs,
+    nextLimitOpenMs: nextLimitOpenMs,
     parkedAtForVerdict: parkedAtForVerdict,
     renderPlanAhead: renderPlanAhead, planResultText: planResultText,
     planChosenMs: planChosenMs, setPlanOpen: setPlanOpen,
