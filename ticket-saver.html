@@ -123,6 +123,8 @@
   <div id="mainView">
   <h1 id="mainTitle" tabindex="-1">Ticket Saver</h1>
 
+  <div class="banner hidden" id="liveBanner"></div>
+
   <div id="parkedBanner" class="parked hidden"><span>Parked: <b id="parkedSide">—</b></span><button class="linkbtn change" id="clearSide" aria-label="Not parked here — clear">&#10005;</button></div>
 
   <div class="card hidden" id="heroCard">
@@ -167,7 +169,7 @@
   <div id="detailsView" class="hidden">
   <h1 id="detailsTitle" tabindex="-1">Details</h1>
 
-  <div class="banner" style="margin-top:10px"><b>Verified on my side.</b> The window was checked against a photo of the physical sign on Nov 16, 2026,
+  <div class="banner" style="margin-top:10px" id="verifyBanner"><b>Verified on my side.</b> The window was checked against a photo of the physical sign on Nov 16, 2026,
   and the 7&ndash;8 AM sign at the far end of the block
   belongs to Chemin de la C&ocirc;te-des-Neiges, not this street. The other side is still
   unverified, and the full block has not been walked yet. <b>Always check the sign where
@@ -194,11 +196,11 @@
 
   <div class="card foot">
     <div>Data: City of Montr&eacute;al open data, <a id="srcLink" href="https://donnees.montreal.ca/dataset/stationnement-sur-rue-signalisation-courant">Stationnement sur rue — signalisation courante</a> (CC-BY 4.0), as of <span class="asOf2">—</span>.
-    Joined to street segment ID_TRC 1260585 (Rue McGregor to Chemin de la C&ocirc;te-des-Neiges) from
+    <span id="segmentNote">Joined to street segment ID_TRC 1260585 (Rue McGregor to Chemin de la C&ocirc;te-des-Neiges) from
     signs 3–10&nbsp;m off the road centreline; a window counts as established only when two or more
     poles carry the identical sign. Season Apr 1 – Dec 1 <b>inclusive</b>. Arrow codes on the signs
     (FLECHE_PAN) are not decoded in the open data, so no arrow is assumed to mean both directions.
-    Centreline: OpenStreetMap contributors (ODbL). Times are America/Toronto.</div>
+    Centreline: OpenStreetMap contributors (ODbL). Times are America/Toronto.</span></div>
     <div style="margin-top:8px">Cleaning only. Winter snow removal is separate — infoneige.ca already covers it.
     No-stopping panels (\A EN TOUT TEMPS) are a stopping ban, not a cleaning window.</div>
     <div style="margin-top:8px">Resident permits: the photographed SE sign also carries
@@ -439,6 +441,7 @@ function parseHM(s) { var a = String(s).split(":"); return { h: +a[0], mi: +a[1]
    auto-arm — its timer keeps the old tap-is-start behavior. Returns null
    when no side is picked or that side has no verified limit. */
 function limitForSide() {
+  if (liveMode()) return null; /* live streets have no limits in the lookup — manual timer only */
   var lims = (typeof DATA !== "undefined" && DATA) ? DATA.limits : null;
   if (!lims) return null;
   return lims[getSelectedSide()] || null;
@@ -556,12 +559,16 @@ function el(id) { return document.getElementById(id); }
 function esc(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
-function sideLabel(key) { return key === "SE" ? "My side — 1558" : "Across the street"; }
+function sideLabel(key) {
+  if (liveMode()) return key === "even" ? "Even numbers side" : "Odd numbers side";
+  return key === "SE" ? "My side — 1558" : "Across the street";
+}
 
 function renderSideCards() {
+  if (liveMode() && LIVE.status !== "ready") { el("sideCards").innerHTML = liveSideCardsHtml(); return; }
   var html = "";
-  ["SE", "NW"].forEach(function (key) {
-    var s = DATA.sides[key];
+  liveActiveSideKeys().forEach(function (key) {
+    var s = liveActiveSides()[key];
     html += '<div class="card"><div class="label">' + esc(s.label) + '</div>';
     if (s.status === "established") {
       s.windows.forEach(function (w) {
@@ -574,8 +581,10 @@ function renderSideCards() {
         } else {
           html += '<div class="sign">Sign says: <span class="fr">' + esc(w.verbatim) + '</span><br>'
             + '<span class="note">' + w.signs.length + ' pole(s) on this side carry this sign ('
-            + w.signs.map(function (g) { return Math.round(Math.abs(g.along_track_from_home_block_m)) + " m " +
-                (g.along_track_from_home_block_m < 0 ? "NE" : "SW") + " of 1558"; }).join("; ")
+            + (liveMode()
+              ? w.signs.map(function (g) { return Math.round(Math.abs(g.along_track_from_home_block_m)) + " m from " + LIVE.houseNumber; }).join("; ")
+              : w.signs.map(function (g) { return Math.round(Math.abs(g.along_track_from_home_block_m)) + " m " +
+                (g.along_track_from_home_block_m < 0 ? "NE" : "SW") + " of 1558"; }).join("; "))
             + ').</span></div>';
           if (w.exception) {
             html += '<div class="warnline">Except resident-permit holders (' + esc(w.exception) + '). '
@@ -614,7 +623,7 @@ function renderSideCards() {
 }
 
 function getSelectedSide() {
-  try { return localStorage.getItem(LS_KEY); } catch (e) { return null; }
+  try { return localStorage.getItem(liveSideKey() || LS_KEY); } catch (e) { return null; }
 }
 /* Parking is a single tap: picking a side (or the Parked toggle) says "I parked
    here" — it also arms the limit timer when the window opens later (no saved
@@ -625,7 +634,8 @@ function getSelectedSide() {
 function setSelectedSide(key, nowMs) {
   nowMs = nowMs || Date.now();
   try {
-    if (key) localStorage.setItem(LS_KEY, key); else localStorage.removeItem(LS_KEY);
+    var sk = liveSideKey() || LS_KEY;
+    if (key) localStorage.setItem(sk, key); else localStorage.removeItem(sk);
   } catch (e) { /* private mode — selection just won't persist */ }
   if (!key) { clearLimitTimer(); }
   else {
@@ -637,14 +647,14 @@ function setSelectedSide(key, nowMs) {
 function toggleParked(nowMs) {
   nowMs = nowMs || Date.now();
   if (getSelectedSide()) setSelectedSide(null, nowMs);
-  else setSelectedSide(PARKED_DEFAULT_SIDE, nowMs);
+  else setSelectedSide(liveDefaultSide(), nowMs);
 }
 
 /* A side can carry more than one genuine window (Lacombe even: Tue 10-11 from
    the data + Tue 12-14 from a photo). The hero counts down to the nearest one;
    a window that is live right now wins over a later one. */
 function nextWindowForSide(key, now) {
-  var s = DATA.sides[key];
+  var s = liveActiveSides()[key];
   if (!s || s.status !== "established" || !s.windows || !s.windows.length) return null;
   var best = null;
   for (var i = 0; i < s.windows.length; i++) {
@@ -660,8 +670,19 @@ function nextWindowForSide(key, now) {
    Returns { mode, title, count, detail, showIcs, exception }.
    mode: 'prompt' (no side) | 'no_window' | 'now' | 'next' | 'season_over' | 'error' */
 function heroState(key, now) {
+  if (liveMode()) {
+    if (LIVE.status === "error-map" || LIVE.status === "error-data" || LIVE.status === "error-side" || LIVE.status === "error-street") {
+      return { mode: "no_window", showIcs: false, title: LIVE.errorTitle || "No verified window",
+               detail: LIVE.errorDetail || "No verified window." };
+    }
+    if (LIVE.status === "loading") {
+      if (!key) return { mode: "prompt" };
+      return { mode: "loading", showIcs: false, title: "Checking the city's signs\u2026", detail: "" };
+    }
+    /* ready: fall through — liveActiveSides() supplies the live sides below */
+  }
   if (!key) return { mode: "prompt" };
-  var s = DATA.sides[key];
+  var s = liveActiveSides()[key];
   if (!s || s.status !== "established") {
     return { mode: "no_window", showIcs: false,
              title: "No verified window",
@@ -693,8 +714,7 @@ function heroState(key, now) {
 function renderHero() {
   var key = getSelectedSide();
   var hero = el("heroCard"), banner = el("parkedBanner");
-  el("btnSE").classList.toggle("selected", key === "SE");
-  el("btnNW").classList.toggle("selected", key === "NW");
+  liveMarkSideButtons(key);
   var tg = el("parkedToggle");
   if (!key) {
     banner.classList.add("hidden");
@@ -778,6 +798,7 @@ function renderAll() {
   renderSideCards();
   renderHero();
   renderLimit();
+  liveRenderChrome();
 }
 
 /* Knowing the street (his call Nov 17: "I am here, it should know the street").
@@ -853,22 +874,30 @@ function geoNeedsLookup(lat, lon, now) {
   if (now - geoLookup.at < 10000) return false;
   return streetDistM(lat, lon, { lat: geoLookup.lat, lon: geoLookup.lon }) > 50;
 }
-function reverseGeocode(lat, lon) {
-  if (typeof fetch === "undefined") return;
+function reverseGeocode(lat, lon, cb) {
+  if (typeof fetch === "undefined") { if (cb) cb(null); return; }
   var now = Date.now();
-  if (!geoNeedsLookup(lat, lon, now)) return;
-  geoLookup = { lat: lat, lon: lon, label: geoLookup ? geoLookup.label : null, at: now };
+  if (!geoNeedsLookup(lat, lon, now)) {
+    if (cb) cb(geoLookup && geoLookup.feature ? geoLookup.feature : null);
+    return;
+  }
+  geoLookup = { lat: lat, lon: lon, label: geoLookup ? geoLookup.label : null,
+    feature: geoLookup ? geoLookup.feature : null, at: now };
   fetch("https://photon.komoot.io/reverse?lon=" + lon.toFixed(6) + "&lat=" + lat.toFixed(6))
     .then(function (r) { return r.json(); })
     .then(function (data) {
       var label = parsePhoton(data);
+      var feature = (data && data.features && data.features.length) ? data.features[0] : null;
       /* only apply if no newer lookup has started since (a stale label must
          never overwrite a newer fix's street) */
-      if (label && geoLookup && geoLookup.lat === lat && geoLookup.lon === lon) {
-        geoLookup.label = label; renderGpsRow();
+      var current = geoLookup && geoLookup.lat === lat && geoLookup.lon === lon;
+      if (current) {
+        if (feature) geoLookup.feature = feature;
+        if (label) { geoLookup.label = label; renderGpsRow(); }
       }
+      if (cb) cb(current ? feature : null);
     })
-    .catch(function () { /* keep the distance text */ });
+    .catch(function () { if (cb) cb(null); /* keep the distance text */ });
 }
 function renderGpsRow() {
   var st = el("gpsStatus");
@@ -895,7 +924,12 @@ function checkGps() {
                 homeDist: Math.round(Math.sqrt(hp[0] * hp[0] + hp[1] * hp[1])),
                 accuracy: pos.coords.accuracy };
     renderGpsRow();
-    reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+    var swUrl = shouldSwitchStreet(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+    var willSwitch = (typeof liveWillSwitch === "function") ? liveWillSwitch(swUrl) : !!swUrl;
+    reverseGeocode(pos.coords.latitude, pos.coords.longitude, function (feature) {
+      if (willSwitch) return; /* switching away — the other page owns this fix */
+      if (typeof liveMaybeLookup === "function") liveMaybeLookup(pos.coords.latitude, pos.coords.longitude, feature);
+    });
     maybeSwitchStreet(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
   }, function () {
     st.textContent = "📍 Location unavailable — home block (1558)";
@@ -1060,6 +1094,925 @@ function init() {
 if (typeof document !== "undefined" && document.addEventListener) {
   document.addEventListener("DOMContentLoaded", init);
 }
+/* ---- LIVE street lookup (runtime; not a baked-in street) ----
+   Runs only when the GPS fix is farther than street_switch_m from every
+   known (baked-in) street anchor. Same method as the build-time pipeline
+   (build_data.py / build_data_street.py), ported to the page:
+     1. Photon already named the street + house number (reverseGeocode).
+     2. Overpass fetches the street's way geometry near the fix (the
+        centreline) + the named ways sharing its nodes (cross streets).
+        Retries on 502/503/504/429, up to 3 attempts, primary
+        overpass-api.de then overpass.kumi.systems. On failure the lookup
+        reports "couldn't read the street map" and stops — never guesses.
+     3. CKAN Signalisation bounding-box query around the fix (same SQL
+        shape as the build, box ~+-250 m).
+     4. Side attribution: prefer the Geobase segment whose address range
+        contains the house number; the cross-track mapping always comes
+        from the house point (Photon geometry, else a Photon forward
+        search) snapped to the centreline — the house number's parity
+        plus the house point's cross-track sign. If the house point
+        cannot be found, the side is unknown and the lookup reports that.
+        No SENS_CIR inference is used anywhere: it fits the three known
+        streets but would rest both sides' windows on an unproven guess.
+     5. RPA codification: only the codes present in the fetched signs
+        are queried (never LIMIT 5000); the code->text map is cached in
+        localStorage and reused.
+     6. The whitelist parser (parse_sign + helpers) is ported verbatim,
+        with the SAME consensus guards: >=2 distinct poles, any
+        ambiguous sign vetoes its side, two windows = conflict, no data
+        = not established. No nearest-sign fallback, ever.
+     7. Segment = the intersections bracketing the house point (nodes
+        shared with a differently-named highway way), 20 m exclusion at
+        each end — the same rule the build used. A fixed-radius clip
+        cannot reproduce the baked streets (it drops Lacombe's -221.9 m
+        pole and admits the +174 m cross-street pole on the home block), so the
+        segment is genuinely derived, never assumed.
+   The result is cached in localStorage keyed by street + segment and
+   re-validated against the dataset's metadata_modified on every open.
+   The limit timer stays manual-only on a live street (no limits in the
+   lookup). Baked-in streets never enter this path. */
+var LIVE_CKAN = "https://donnees.montreal.ca/api/3/action/";
+var LIVE_SIGN_PKG = "8ac6dd33-b0d3-4eab-a334-5a6283eb7940";
+var LIVE_SIGN_RID = "7f1d4ae9-1a12-46d7-953e-6b9c18c78680";
+var LIVE_GEO_RID = "2f1717e9-0141-48ef-8943-ea348373667f";
+var LIVE_RPA_RID = "1baac760-4311-4b4f-8996-db93d348cc24";
+var LIVE_OVERPASS_URLS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
+var LIVE_PHOTON_SEARCH = "https://photon.komoot.io/api/?q=";
+var LIVE_BAND_MIN_M = 3, LIVE_BAND_MAX_M = 10;
+var LIVE_INTERSECTION_M = 20, LIVE_CONSENSUS = 2;
+var LIVE_CACHE_TTL_MS = 7 * 86400000;
+var LIVE_CACHE_PREFIX = "ticketSaver.live.v1.";
+var LIVE_RPA_KEY = "ticketSaver.rpa.v1";
+var LIVE_CARRIAGEWAY = ["motorway", "trunk", "primary", "secondary", "tertiary",
+  "unclassified", "residential", "living_street"];
+var LIVE = { status: "idle", streetName: null, streetSlug: null, houseNumber: null,
+  houseLat: null, houseLon: null, sides: null, counts: null, segment: null,
+  sideMethod: null, idTrc: null, dataAsOf: null, errorTitle: null, errorDetail: null,
+  geoDisagreement: false };
+var LIVE_LOADING = null; /* { key, promise } — one lookup per street+house at a time */
+
+/* ---- whitelist parser, ported from build_data.py (same grammar, same guards) ---- */
+var LIVE_WEEKDAYS_FULL = { LUNDI: 1, MARDI: 2, MERCREDI: 3, JEUDI: 4, VENDREDI: 5, SAMEDI: 6, DIMANCHE: 7 };
+var LIVE_WEEKDAYS_ABBR = { LUN: 1, MAR: 2, MER: 3, JEU: 4, VEN: 5, SAM: 6, DIM: 7 };
+var LIVE_MONTHS = { JANVIER: 1, FEVRIER: 2, "FÉVRIER": 2, MARS: 3, AVRIL: 4, MAI: 5,
+  JUIN: 6, JUILLET: 7, AOUT: 8, "AOÛT": 8, SEPTEMBRE: 9, OCTOBRE: 10, NOVEMBRE: 11,
+  DECEMBRE: 12, "DÉCEMBRE": 12, JANV: 1, FEVR: 2, AVR: 4, JUIL: 7, SEPT: 9, OCT: 10, NOV: 11, DEC: 12 };
+var LIVE_WEEKDAY_FR = { 1: "LUNDI", 2: "MARDI", 3: "MERCREDI", 4: "JEUDI", 5: "VENDREDI", 6: "SAMEDI", 7: "DIMANCHE" };
+var LIVE_HOUR = "([01]?\\d|2[0-3])H([0-5]\\d)?";
+var LIVE_SEASON = "(\\d{1,2}) ([A-ZÉÛ]+) AU (\\d{1,2}) ([A-ZÉÛ]+)";
+var LIVE_STRICT_RE = new RegExp("^\\\\P " + LIVE_HOUR + "-" + LIVE_HOUR +
+  " ((?:LUNDI|MARDI|MERCREDI|JEUDI|VENDREDI|SAMEDI|DIMANCHE)" +
+  "(?: (?:LUNDI|MARDI|MERCREDI|JEUDI|VENDREDI|SAMEDI|DIMANCHE))*) " + LIVE_SEASON + "$");
+var LIVE_CANON_RE = new RegExp("^\\\\P " + LIVE_HOUR + "-" + LIVE_HOUR +
+  " ((?:LUNDI|MARDI|MERCREDI|JEUDI|VENDREDI|SAMEDI|DIMANCHE|LUN\\.?|MAR\\.?|MER\\.?|JEU\\.?|VEN\\.?|SAM\\.?|DIM\\.?)" +
+  "(?: (?:LUNDI|MARDI|MERCREDI|JEUDI|VENDREDI|SAMEDI|DIMANCHE|LUN\\.?|MAR\\.?|MER\\.?|JEU\\.?|VEN\\.?|SAM\\.?|DIM\\.?))*) " +
+  LIVE_SEASON + "\\.?$");
+
+function livePad2(n) { n = String(n); return n.length < 2 ? "0" + n : n; }
+function liveEsc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function liveNorm(text) {
+  return String(text || "").toUpperCase().replace(/`/g, "'").replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+}
+function liveParseSeason(d1, m1, d2, m2) {
+  var sm = LIVE_MONTHS[m1], em = LIVE_MONTHS[m2];
+  if (sm === undefined || em === undefined) return { season: null, err: "unknown month name in season" };
+  var s = new Date(Date.UTC(2026, sm - 1, d1)), e = new Date(Date.UTC(2026, em - 1, d2));
+  if (s.getUTCMonth() !== sm - 1 || s.getUTCDate() !== d1 || e.getUTCMonth() !== em - 1 || e.getUTCDate() !== d2) {
+    return { season: null, err: "invalid season date" };
+  }
+  if (em * 100 + d2 < sm * 100 + d1) return { season: null, err: "season end before season start (wraps the year?) — out of scope" };
+  return { season: { start_month: sm, start_day: d1, end_month: em, end_day: d2,
+    verbatim: d1 + " " + m1 + " AU " + d2 + " " + m2 }, err: null };
+}
+function liveParseWindowParts(m, days) {
+  var sh = parseInt(m[1], 10), sm = parseInt(m[2] || "0", 10);
+  var eh = parseInt(m[3], 10), em = parseInt(m[4] || "0", 10);
+  if (eh * 60 + em <= sh * 60 + sm) return { win: null, err: "hour range ends before it starts" };
+  var seen = {};
+  for (var i = 0; i < days.length; i++) {
+    if (seen[days[i]]) return { win: null, err: "duplicated weekday" };
+    seen[days[i]] = true;
+  }
+  var s = liveParseSeason(parseInt(m[6], 10), m[7], parseInt(m[8], 10), m[9]);
+  if (s.err) return { win: null, err: s.err };
+  var sorted = days.slice().sort(function (a, b) { return a - b; });
+  return { win: { weekdays_iso: sorted,
+    weekdays_fr: sorted.map(function (d) { return LIVE_WEEKDAY_FR[d]; }),
+    start: livePad2(sh) + ":" + livePad2(sm), end: livePad2(eh) + ":" + livePad2(em),
+    season: s.season }, err: null };
+}
+function liveParseWith(re, text, vocab) {
+  var m = re.exec(text);
+  if (!m) return { win: null, err: "does not match the whitelist grammar" };
+  var days = [], toks = m[5].split(" ");
+  for (var i = 0; i < toks.length; i++) {
+    var tok = toks[i].replace(/\.$/, "");
+    if (vocab[tok] === undefined) return { win: null, err: "weekday token outside the whitelist" };
+    days.push(vocab[tok]);
+  }
+  return liveParseWindowParts(m, days);
+}
+function liveParseSign(text, code, canonByCode) {
+  var raw = text || "";
+  var t = liveNorm(raw);
+  var out = { verbatim: raw, normalized: t, kind: "other", window: null,
+    exception: null, confidence: null, code_rpa: code, code_agrees: null, notes: [] };
+  var body = t;
+  if (t.indexOf("EXCEPTE S3R") >= 0 || t.indexOf("EXCEPTÉ S3R") >= 0) {
+    out.exception = "S3R";
+    out.notes.push("EXCEPTE S3R: resident-permit holders excepted. Conservative default: the restriction applies to him until he confirms he holds a resident permit.");
+    body = t.split(" EXCEPTE S3R").join("").split(" EXCEPTÉ S3R").join("");
+  } else if (t.indexOf("EXCEPTE") >= 0 || t.indexOf("SAUF") >= 0) {
+    out.kind = "ambiguous";
+    out.notes.push("Unrecognised EXCEPTE/SAUF exception — the whole sign is ambiguous.");
+    return out;
+  }
+  if (body.indexOf("EN TOUT TEMPS") >= 0) {
+    if (body.indexOf("\\P") === 0) {
+      out.kind = "permanent_ban";
+      out.notes.push("No-parking at all times (\\P family). Scope is set by the sign's arrow (FLECHE_PAN, undecodable) — a whole-side ban is not asserted from this panel alone.");
+    } else if (body.indexOf("\\A") === 0) {
+      out.kind = "permanent_ban";
+      out.notes.push("No-stopping at all times (\\A family) — a stopping ban, not a parking-cleaning window. Scope set by the arrow.");
+    } else {
+      out.kind = "ambiguous";
+      out.notes.push("EN TOUT TEMPS without a \\P/\\A prefix — family unknown.");
+    }
+    return out;
+  }
+  var r = liveParseWith(LIVE_STRICT_RE, body, LIVE_WEEKDAYS_FULL);
+  if (!r.win) {
+    var hourLike = /\d\s*(?:H|:)/.test(body);
+    var dayLike = false, monthLike = false, d, mn;
+    for (d in LIVE_WEEKDAYS_FULL) { if (new RegExp("\\b" + d + "\\b").test(body)) dayLike = true; }
+    for (mn in LIVE_MONTHS) { if (body.indexOf(mn) >= 0) monthLike = true; }
+    if (body.indexOf("\\P") === 0 && hourLike && (dayLike || monthLike)) {
+      out.kind = "ambiguous";
+      out.notes.push("Cleaning-shaped text but outside the whitelist grammar: " + r.err);
+    } else {
+      out.notes.push("Not a cleaning sign (time limit / school / loading / other family).");
+    }
+    return out;
+  }
+  var canon = canonByCode ? canonByCode[code] : undefined;
+  if (canon === undefined) {
+    out.kind = "ambiguous";
+    out.notes.push("CODE_RPA " + code + " not in the codification table — cannot verify agreement.");
+    return out;
+  }
+  var vocab = {}, k;
+  for (k in LIVE_WEEKDAYS_FULL) vocab[k] = LIVE_WEEKDAYS_FULL[k];
+  for (k in LIVE_WEEKDAYS_ABBR) vocab[k] = LIVE_WEEKDAYS_ABBR[k];
+  var cr = liveParseWith(LIVE_CANON_RE, liveNorm(canon), vocab);
+  if (!cr.win) {
+    out.kind = "ambiguous";
+    out.notes.push("CODE_RPA canonical text does not parse under the tolerant grammar: " + cr.err);
+    return out;
+  }
+  function key(w) {
+    var s = w.season;
+    return [w.weekdays_iso.join(","), w.start, w.end, s.start_month, s.start_day, s.end_month, s.end_day].join("|");
+  }
+  if (key(cr.win) !== key(r.win)) {
+    out.kind = "ambiguous";
+    out.notes.push("CODE_RPA canonical text parses to a different window than the sign text.");
+    return out;
+  }
+  out.kind = "cleaning"; out.window = r.win; out.confidence = "high"; out.code_agrees = true;
+  return out;
+}
+
+/* ---- geometry: flat projection + centreline snap (same math as the build) ---- */
+function liveSnap(lat, lon, cl, refLat, refLon) {
+  var coslat = Math.cos(refLat * Math.PI / 180);
+  function xy(la, lo) { return [(lo - refLon) * 111320 * coslat, (la - refLat) * 110540]; }
+  var p = xy(lat, lon), best = null;
+  for (var i = 0; i < cl.length - 1; i++) {
+    var a = xy(cl[i][0], cl[i][1]), b = xy(cl[i + 1][0], cl[i + 1][1]);
+    var dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy;
+    var tt = l2 ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2 : 0;
+    tt = Math.max(0, Math.min(1, tt));
+    var cx = a[0] + tt * dx, cy = a[1] + tt * dy;
+    var ex = p[0] - cx, ey = p[1] - cy, dist = Math.sqrt(ex * ex + ey * ey);
+    if (!best || dist < best.dist) {
+      best = { dist: dist, ct: l2 ? (dx * ey - dy * ex) / Math.sqrt(l2) : 0, seg: i, xy: [cx, cy] };
+    }
+  }
+  return best;
+}
+function liveCumAlong(cl, refLat, refLon) {
+  var coslat = Math.cos(refLat * Math.PI / 180);
+  function xy(la, lo) { return [(lo - refLon) * 111320 * coslat, (la - refLat) * 110540]; }
+  var cum = [0];
+  for (var i = 0; i < cl.length - 1; i++) {
+    var a = xy(cl[i][0], cl[i][1]), b = xy(cl[i + 1][0], cl[i + 1][1]);
+    cum.push(cum[cum.length - 1] + Math.sqrt((b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1])));
+  }
+  return cum;
+}
+function liveAlongFromSnap(cum, cl, sn, refLat, refLon) {
+  var coslat = Math.cos(refLat * Math.PI / 180);
+  var a = [(cl[sn.seg][1] - refLon) * 111320 * coslat, (cl[sn.seg][0] - refLat) * 110540];
+  return cum[sn.seg] + Math.sqrt((sn.xy[0] - a[0]) * (sn.xy[0] - a[0]) + (sn.xy[1] - a[1]) * (sn.xy[1] - a[1]));
+}
+
+/* ---- centreline: chain the named carriageway ways around the fix ---- */
+function liveChainStreetWays(ways, streetName, fixLat, fixLon) {
+  var lower = String(streetName).toLowerCase();
+  var street = ways.filter(function (w) {
+    var t = w.tags || {};
+    return (t.name || "").toLowerCase() === lower && LIVE_CARRIAGEWAY.indexOf(t.highway) >= 0
+      && w.geometry && w.geometry.length >= 2 && w.nodes && w.nodes.length === w.geometry.length;
+  });
+  if (!street.length) return null;
+  function distToWay(w) {
+    var cl = w.geometry.map(function (g) { return [g.lat, g.lon]; });
+    return liveSnap(fixLat, fixLon, cl, fixLat, fixLon).dist;
+  }
+  /* Find the nearest way by scanning — do NOT sort `street` in place: the
+     chaining below takes the first candidate at each junction in fixture
+     order, and reordering the array changes which branch the chain takes. */
+  var first = null, firstDist = Infinity;
+  street.forEach(function (w) { var d = distToWay(w); if (d < firstDist) { firstDist = d; first = w; } });
+  var used = {}; used[first.id] = true;
+  var nodeIds = first.nodes.slice();
+  var points = first.geometry.map(function (g) { return [g.lat, g.lon]; });
+  var byStart = {}, byEnd = {};
+  street.forEach(function (w) {
+    if (used[w.id]) return;
+    (byStart[w.nodes[0]] = byStart[w.nodes[0]] || []).push(w);
+    (byEnd[w.nodes[w.nodes.length - 1]] = byEnd[w.nodes[w.nodes.length - 1]] || []).push(w);
+  });
+  function candsAt(nid) {
+    var out = [];
+    (byStart[nid] || []).concat(byEnd[nid] || []).forEach(function (w) { if (!used[w.id]) out.push(w); });
+    return out;
+  }
+  var guard = 0;
+  while (guard++ < 200) {
+    var c = candsAt(nodeIds[nodeIds.length - 1]);
+    if (!c.length) break;
+    var w = c[0]; used[w.id] = true;
+    if (w.nodes[0] === nodeIds[nodeIds.length - 1]) {
+      nodeIds.push.apply(nodeIds, w.nodes.slice(1));
+      w.geometry.slice(1).forEach(function (g) { points.push([g.lat, g.lon]); });
+    } else {
+      nodeIds.push.apply(nodeIds, w.nodes.slice(0, -1).reverse());
+      w.geometry.slice(0, -1).reverse().forEach(function (g) { points.push([g.lat, g.lon]); });
+    }
+  }
+  guard = 0;
+  while (guard++ < 200) {
+    var c2 = candsAt(nodeIds[0]);
+    if (!c2.length) break;
+    var w2 = c2[0]; used[w2.id] = true;
+    if (w2.nodes[w2.nodes.length - 1] === nodeIds[0]) {
+      nodeIds.unshift.apply(nodeIds, w2.nodes.slice(0, -1));
+      /* Prepend the points as ONE block: unshifting them one by one in a
+         forEach reverses their order (each unshift lands at index 0), which
+         scrambles the polyline — on the home block that doubled the chain
+         from ~772 m to ~1600 m and moved every western crossing. */
+      points.unshift.apply(points, w2.geometry.slice(0, -1).map(function (g) { return [g.lat, g.lon]; }));
+    } else {
+      nodeIds.unshift.apply(nodeIds, w2.nodes.slice(1).reverse());
+      points.unshift.apply(points, w2.geometry.slice(1).reverse().map(function (g) { return [g.lat, g.lon]; }));
+    }
+  }
+  var streetWayIds = {};
+  Object.keys(used).forEach(function (id) { streetWayIds[id] = true; });
+  return { points: points, nodeIds: nodeIds, streetWayIds: streetWayIds };
+}
+
+/* ---- segment: the intersections bracketing the house point ----
+   A crossing is a node the centreline shares with a differently-named
+   highway way. A way sharing 3+ nodes is the same street under another
+   spelling (or a concurrent stretch), not a crossing — ignored, so the
+   segment can never collapse to nothing on a spelling variant. */
+function liveDeriveSegment(chain, crossWays, originAlong, cum) {
+  var nodeIndex = {};
+  chain.nodeIds.forEach(function (nid, i) { nodeIndex[nid] = i; });
+  var crossings = [];
+  crossWays.forEach(function (w) {
+    var shared = [];
+    (w.nodes || []).forEach(function (nid) { if (nid in nodeIndex) shared.push(nid); });
+    if (shared.length === 0 || shared.length > 2) return;
+    shared.forEach(function (nid) {
+      crossings.push({ name: (w.tags && w.tags.name) || "", along: cum[nodeIndex[nid]] - originAlong });
+    });
+  });
+  var below = null, above = null;
+  crossings.forEach(function (c) {
+    if (c.along < 0 && (below === null || c.along > below.along)) below = c;
+    if (c.along > 0 && (above === null || c.along < above.along)) above = c;
+  });
+  return { min: below ? below.along : -originAlong,
+    max: above ? above.along : (cum[cum.length - 1] - originAlong),
+    belowName: below ? below.name : null, aboveName: above ? above.name : null,
+    crossings: crossings };
+}
+
+/* ---- per-side assembly: same veto/conflict/consensus rules as the build ---- */
+function liveExtend(base, extra) {
+  var o = {}, k;
+  for (k in base) o[k] = base[k];
+  for (k in extra) o[k] = extra[k];
+  return o;
+}
+function liveDistinctPoles(rows) {
+  var poles = {};
+  rows.forEach(function (r) { poles[r.poteau_id] = true; });
+  return Object.keys(poles).length;
+}
+function liveBanNote(bans) {
+  if (!bans.length) return null;
+  var p = bans.filter(function (r) { return String(r.parsed.verbatim).replace(/^\s+/, "").indexOf("\\P") === 0; });
+  var a = bans.filter(function (r) { return String(r.parsed.verbatim).replace(/^\s+/, "").indexOf("\\A") === 0; });
+  var parts = [];
+  if (p.length) parts.push(p.length + " no-parking-at-all-times panel(s) (\\P EN TOUT TEMPS) stand on this side in the data — but each panel's reach is set by its arrow (FLECHE_PAN, undecodable), so the data cannot say whether they cover the whole side or only short stretches.");
+  if (a.length) parts.push(a.length + " no-stopping panel(s) (\\A EN TOUT TEMPS) also stand on this side.");
+  return parts.join(" ");
+}
+function liveAssembleSides(attributed) {
+  var sides = {};
+  ["even", "odd"].forEach(function (sideKey) {
+    var srecs = attributed.filter(function (r) { return r.side === sideKey; });
+    var groups = {}, order = [];
+    srecs.forEach(function (r) {
+      if (r.parsed.kind !== "cleaning") return;
+      var w = r.parsed.window;
+      var k = [w.weekdays_iso.join(","), w.start, w.end, w.season.start_month,
+        w.season.start_day, w.season.end_month, w.season.end_day].join("|");
+      if (!groups[k]) { groups[k] = []; order.push(k); }
+      groups[k].push(r);
+    });
+    var bans = srecs.filter(function (r) { return r.parsed.kind === "permanent_ban"; });
+    var amb = srecs.filter(function (r) { return r.parsed.kind === "ambiguous"; });
+    var label = sideKey === "even" ? "Even numbers side" : "Odd numbers side";
+    var base = { label: label, short_label: label, button_html: label,
+      permanent_ban_note: liveBanNote(bans),
+      permanent_ban_signs: bans.map(function (r) { return { verbatim: r.parsed.verbatim, lat: r.lat, lon: r.lon }; }) };
+    var established = order.map(function (k) { return groups[k]; }).filter(function (v) {
+      return liveDistinctPoles(v) >= LIVE_CONSENSUS;
+    });
+    if (amb.length) {
+      sides[sideKey] = liveExtend(base, { status: "ambiguous", windows: [],
+        reason: "A cleaning-shaped sign on this side could not be parsed reliably under the whitelist grammar, so no window is shown for this side until it is resolved. See the verbatim text below.",
+        ambiguous_signs: amb.map(function (r) { return { verbatim: r.parsed.verbatim, lat: r.lat, lon: r.lon, notes: r.parsed.notes }; }) });
+    } else if (established.length > 1) {
+      sides[sideKey] = liveExtend(base, { status: "conflict", windows: [],
+        reason: "Two different cleaning windows were found for this side. This may be genuine (two rules) or a join error — the app does not pick one.",
+        conflicting_windows: established.map(function (v) {
+          var w = v[0].parsed.window;
+          return { weekdays_iso: w.weekdays_iso, weekdays_fr: w.weekdays_fr, start: w.start,
+            end: w.end, season: w.season, verbatim: v[0].parsed.verbatim, pole_count: liveDistinctPoles(v) };
+        }) });
+    } else if (established.length === 1) {
+      var v = established[0], w = v[0].parsed.window, exc = null;
+      v.forEach(function (r) { if (r.parsed.exception) exc = r.parsed.exception; });
+      sides[sideKey] = liveExtend(base, { status: "established",
+        windows: [{ weekdays_iso: w.weekdays_iso, weekdays_fr: w.weekdays_fr, start: w.start,
+          end: w.end, season: w.season, exception: exc, confidence: "high",
+          verbatim: v[0].parsed.verbatim,
+          signs: v.map(function (r) { return { lat: r.lat, lon: r.lon, poteau_id: r.poteau_id,
+            fleche_pan: r.fleche_pan, distance_to_centreline_m: r.distance_to_centreline_m,
+            along_track_from_home_block_m: r.along_track_from_home_block_m }; }) }] });
+    } else {
+      var nClean = order.reduce(function (n, k) { return n + groups[k].length; }, 0);
+      sides[sideKey] = liveExtend(base, { status: "not_established", windows: [],
+        reason: "No cleaning sign for this side passed the segment + band + intersection checks in the city's signage data. Cleaning signs attributed to this side in the segment: " + nClean + ". The data may be incomplete." });
+    }
+  });
+  return sides;
+}
+
+/* ---- pure pipeline core: fetched signs + canon + centreline -> sides ---- */
+function liveBuildResult(input) {
+  var chain = input.chain, refLat = input.houseLat, refLon = input.houseLon;
+  var cum = liveCumAlong(chain.points, refLat, refLon);
+  var houseSnap = liveSnap(input.houseLat, input.houseLon, chain.points, refLat, refLon);
+  if (!houseSnap || houseSnap.ct === 0) return { status: "error", error: "error-side" };
+  var houseAlong = liveAlongFromSnap(cum, chain.points, houseSnap, refLat, refLon);
+  var houseParity = (input.houseNumber % 2 === 0) ? "even" : "odd";
+  var ctPosSide = houseSnap.ct >= 0 ? houseParity : (houseParity === "even" ? "odd" : "even");
+  var geo = input.geoHit || null, sideMethod = "snap", geoDisagreement = false;
+  if (geo && geo.parity) {
+    if (geo.parity === houseParity) sideMethod = "geobase";
+    else geoDisagreement = true; /* geometry wins: the house point is the ground truth */
+  }
+  var seg = liveDeriveSegment(chain, input.crossWays, houseAlong, cum);
+  var seen = {}, attributed = [];
+  var counts = { fetched_in_box: input.signs.length, in_band_3_10m: 0, in_segment: 0,
+    attributed: 0, cleaning_in_segment: 0, duplicate_panneau_rows_skipped: 0,
+    intersection_suspect_excluded: 0, too_close_to_centreline_flagged: 0 };
+  input.signs.forEach(function (s) {
+    if (seen[s.PANNEAU_ID_PAN]) { counts.duplicate_panneau_rows_skipped++; return; }
+    seen[s.PANNEAU_ID_PAN] = true;
+    var lat = parseFloat(s.Latitude), lon = parseFloat(s.Longitude);
+    if (isNaN(lat) || isNaN(lon)) return;
+    var sn = liveSnap(lat, lon, chain.points, refLat, refLon);
+    var along = liveAlongFromSnap(cum, chain.points, sn, refLat, refLon) - houseAlong;
+    var parsed = liveParseSign(s.DESCRIPTION_RPA, s.CODE_RPA, input.canonByCode);
+    var side = sn.ct >= 0 ? ctPosSide : (ctPosSide === "even" ? "odd" : "even");
+    if (sn.dist < LIVE_BAND_MIN_M) { counts.too_close_to_centreline_flagged++; return; }
+    if (sn.dist > LIVE_BAND_MAX_M) return;
+    counts.in_band_3_10m++;
+    if (along < seg.min || along > seg.max) return;
+    if (along - seg.min < LIVE_INTERSECTION_M || seg.max - along < LIVE_INTERSECTION_M) {
+      counts.intersection_suspect_excluded++; return;
+    }
+    counts.in_segment++;
+    if (parsed.kind === "cleaning") counts.cleaning_in_segment++;
+    attributed.push({ poteau_id: s.POTEAU_ID_POT, position: s.POSITION_POP,
+      panneau_id: s.PANNEAU_ID_PAN, code_rpa: s.CODE_RPA, fleche_pan: s.FLECHE_PAN,
+      lat: lat, lon: lon, distance_to_centreline_m: Math.round(sn.dist * 10) / 10,
+      cross_track_m: Math.round(sn.ct * 10) / 10, side: side,
+      along_track_from_home_block_m: Math.round(along * 10) / 10, parsed: parsed });
+  });
+  counts.attributed = attributed.length;
+  return { status: "ok", sides: liveAssembleSides(attributed), counts: counts,
+    segment: { min: Math.round(seg.min * 10) / 10, max: Math.round(seg.max * 10) / 10,
+      belowName: seg.belowName, aboveName: seg.aboveName },
+    houseSide: houseParity, sideMethod: sideMethod, geoDisagreement: geoDisagreement,
+    idTrc: geo ? geo.idTrc : null, dataAsOf: input.dataAsOf || null,
+    streetName: input.streetName, houseNumber: input.houseNumber, attributed: attributed };
+}
+
+/* ---- small pure helpers (street name, house number, SQL, cache keys) ---- */
+function liveSlug(s) {
+  return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "street";
+}
+function liveParseHouseNumber(h) {
+  if (h === null || h === undefined) return null;
+  var m = String(h).match(/^\s*(\d+)/);
+  return m ? parseInt(m[1], 10) : null;
+}
+function liveNomVoieCandidate(streetName) {
+  var s = String(streetName || "").toLowerCase();
+  s = s.replace(/['\u2019]/g, "'");
+  s = s.replace(/^(avenue|rue|boulevard|chemin|place|cote|route|allee|impasse|terrasse|square|croissant|montee|rang|quai)\s+/, "");
+  s = s.replace(/\s+(ouest|est|nord|sud)$/, "");
+  /* Strip a leading French article ONLY when it is a whole word (followed
+     by a space) or an elision (d', l'). The old pattern had no boundary,
+     so "la" ate the first two letters of La- names: Lacombe came out as
+     "combe" and the Geobase lookup found nothing, silently dropping that
+     street to the snap fallback. */
+  var prev;
+  do { prev = s; s = s.replace(/^(des|de|du|la|le|les)\s+/, ""); } while (s !== prev);
+  s = s.replace(/^[dl]'/, "");
+  return s.replace(/^\s+|\s+$/g, "");
+}
+function liveHouseFromFeature(feature) {
+  if (!feature || !feature.properties) return null;
+  var p = feature.properties;
+  var street = p.street || (p.type === "street" ? p.name : null);
+  var pt = null;
+  if (feature.geometry && feature.geometry.type === "Point" && feature.geometry.coordinates) {
+    pt = { lon: feature.geometry.coordinates[0], lat: feature.geometry.coordinates[1] };
+  }
+  return { street: street, number: liveParseHouseNumber(p.housenumber), point: pt };
+}
+function liveGeobaseHit(rows, houseNumber) {
+  var hit = null;
+  (rows || []).forEach(function (r) {
+    var d = parseInt(r.DEBUT_ADRESSE, 10), f = parseInt(r.FIN_ADRESSE, 10);
+    if (isNaN(d) || isNaN(f)) return;
+    var lo = Math.min(d, f), hi = Math.max(d, f);
+    if (houseNumber >= lo && houseNumber <= hi) {
+      hit = { parity: (d % 2 === 0) ? "even" : "odd", idTrc: r.ID_TRC, cote: r.COTE };
+    }
+  });
+  return hit;
+}
+function liveCkanSignsSql(lat, lon) {
+  var dLat = 250 / 110540;
+  var dLon = 250 / (111320 * Math.cos(lat * Math.PI / 180));
+  function f(n) { return n.toFixed(6); }
+  return 'SELECT "_id","POTEAU_ID_POT","POSITION_POP","PANNEAU_ID_PAN","DESCRIPTION_RPA",' +
+    '"CODE_RPA","FLECHE_PAN","TOPONYME_PAN","NOM_ARROND","Longitude","Latitude",' +
+    '"POTEAU_VERSION_POT","DATE_CONCEPTION_POT","DATE_EXECUTION_ACT" FROM "' + LIVE_SIGN_RID +
+    '" WHERE "Latitude"::float BETWEEN ' + f(lat - dLat) + ' AND ' + f(lat + dLat) +
+    ' AND "Longitude"::float BETWEEN ' + f(lon - dLon) + ' AND ' + f(lon + dLon) +
+    ' ORDER BY "Latitude"';
+}
+function liveGeobaseSql(candidate) {
+  var c = String(candidate).replace(/'/g, "''");
+  return 'SELECT "COTE_RUE_ID","ID_TRC","ID_VOIE","NOM_VOIE","DEBUT_ADRESSE","FIN_ADRESSE",' +
+    '"COTE","SENS_CIR" FROM "' + LIVE_GEO_RID + '" WHERE "NOM_VOIE" ILIKE \'' + c + '\'';
+}
+function liveRpaSql(codes) {
+  var list = codes.map(function (c) { return "'" + String(c).replace(/'/g, "''") + "'"; }).join(",");
+  return 'SELECT "PANNEAU_ID_RPA","DESCRIPTION_RPA","CODE_RPA" FROM "' + LIVE_RPA_RID +
+    '" WHERE "CODE_RPA" IN (' + list + ')';
+}
+function liveOverpassQuery(streetName, lat, lon) {
+  var name = String(streetName).replace(/"/g, "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return '[out:json][timeout:60];way[highway][name~"' + name + '",i](around:400,' +
+    lat.toFixed(6) + ',' + lon.toFixed(6) + ')->.s;node(w.s)->.n;' +
+    'way(bn.n)[highway][name]->.c;(.s;.c;);out geom;';
+}
+function liveCacheKey(slug, idTrc, houseNumber) {
+  return LIVE_CACHE_PREFIX + slug + "." + (idTrc || ("h" + houseNumber));
+}
+function liveCacheRead(key) {
+  try {
+    var raw = localStorage.getItem(key);
+    if (!raw) return null;
+    var o = JSON.parse(raw);
+    if (!o || !o.result || typeof o.savedAt !== "number") return null;
+    if (Date.now() - o.savedAt > LIVE_CACHE_TTL_MS) return null;
+    return o;
+  } catch (e) { return null; }
+}
+function liveCacheSave(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* private mode */ }
+}
+function liveRpaCacheGet(codes) {
+  var out = {};
+  try {
+    var raw = localStorage.getItem(LIVE_RPA_KEY);
+    if (!raw) return out;
+    var o = JSON.parse(raw);
+    if (o && o.codes) codes.forEach(function (c) { if (o.codes[c] !== undefined) out[c] = o.codes[c]; });
+  } catch (e) { /* corrupt cache reads as empty */ }
+  return out;
+}
+function liveRpaCacheSave(codes) {
+  try {
+    var o = {};
+    try { o = JSON.parse(localStorage.getItem(LIVE_RPA_KEY) || "{}") || {}; } catch (e) { o = {}; }
+    o.codes = o.codes || {};
+    Object.keys(codes).forEach(function (k) { o.codes[k] = codes[k]; });
+    o.savedAt = Date.now();
+    localStorage.setItem(LIVE_RPA_KEY, JSON.stringify(o));
+  } catch (e) { /* private mode */ }
+}
+
+/* ---- page integration: live mode, side keys, chrome, gating ---- */
+function liveMode() { return typeof LIVE !== "undefined" && LIVE && LIVE.status !== "idle"; }
+function liveActiveSides() {
+  if (liveMode() && LIVE.status === "ready" && LIVE.sides) return LIVE.sides;
+  return DATA.sides;
+}
+function liveActiveSideKeys() {
+  if (liveMode()) return ["even", "odd"];
+  if (typeof DATA !== "undefined" && DATA && DATA.sides && DATA.sides.SE) return ["SE", "NW"];
+  return ["even", "odd"];
+}
+function liveDefaultSide() { return liveMode() ? "even" : PARKED_DEFAULT_SIDE; }
+function liveSideKey() {
+  if (liveMode() && LIVE.streetSlug) return "ticketSaver.live.side." + LIVE.streetSlug + ".v1";
+  return null;
+}
+function liveSideButtonEl(sideKey) {
+  if (sideKey === "even") return el("btnEven") || el("btnSE");
+  if (sideKey === "odd") return el("btnOdd") || el("btnNW");
+  if (sideKey === "SE") return el("btnSE");
+  if (sideKey === "NW") return el("btnNW");
+  return null;
+}
+function liveMarkSideButtons(key) {
+  liveActiveSideKeys().forEach(function (k) {
+    var b = liveSideButtonEl(k);
+    if (b && b.classList) b.classList.toggle("selected", k === key);
+  });
+}
+function liveVerifyBannerHtml() {
+  if (LIVE.status === "loading") {
+    return "<b>Live city-data lookup.</b> Reading the city\u2019s signs for " + liveEsc(LIVE.streetName || "") + "\u2026";
+  }
+  if (LIVE.status !== "ready") {
+    return "<b>" + liveEsc(LIVE.errorTitle || "Live city-data lookup") + ".</b> " + liveEsc(LIVE.errorDetail || "");
+  }
+  return "<b>Live city-data lookup \u2014 not a verified page.</b> These windows come from the City of Montreal\u2019s open signage data for " +
+    liveEsc(LIVE.streetName) + ", read live at your location. No photo of the physical signs has been checked. Always read the sign where you park.";
+}
+function liveSegmentNoteHtml() {
+  if (LIVE.status !== "ready") return "";
+  var seg = LIVE.segment || {};
+  var s = "Live lookup for " + liveEsc(LIVE.streetName) + " (near " + liveEsc(LIVE.houseNumber) + "). " +
+    "Joined from signs 3\u201310&nbsp;m off the road centreline between the intersections bracketing " + liveEsc(LIVE.houseNumber);
+  if (seg.belowName || seg.aboveName) {
+    s += " (" + liveEsc(seg.belowName || "street end") + " to " + liveEsc(seg.aboveName || "street end") + ")";
+  }
+  if (LIVE.idTrc) s += ", street segment ID_TRC " + liveEsc(LIVE.idTrc);
+  s += "; a window counts as established only when two or more poles carry the identical sign. " +
+    "Season Apr 1 \u2013 Dec 1 <b>inclusive</b>. Arrow codes on the signs (FLECHE_PAN) are not decoded in the open data, " +
+    "so no arrow is assumed to mean both directions. Centreline: OpenStreetMap contributors (ODbL). Times are America/Toronto.";
+  if (LIVE.geoDisagreement) {
+    s += " The city\u2019s side record disagreed with the house position \u2014 the house position was used.";
+  }
+  return s;
+}
+function liveSideCardsHtml() {
+  if (LIVE.status === "loading") {
+    return '<div class="card"><div class="label">Live lookup \u2014 ' + liveEsc(LIVE.streetName || "") +
+      '</div><div style="font-size:20px;font-weight:700;margin-top:4px">Reading the city\u2019s signs\u2026</div></div>';
+  }
+  return '<div class="card"><div class="label">Live lookup \u2014 ' + liveEsc(LIVE.streetName || "") +
+    '</div><div style="font-size:20px;font-weight:700;margin-top:4px">' + liveEsc(LIVE.errorTitle || "Live city-data lookup") +
+    '</div><div class="note">' + liveEsc(LIVE.errorDetail || "No windows can be shown.") + '</div></div>';
+}
+var liveOrig = null;
+function liveRenderChrome() {
+  if (typeof document === "undefined") return;
+  if (!liveOrig) {
+    liveOrig = { title: (document.title !== undefined) ? document.title : "",
+      banner: (function () { var b = el("verifyBanner"); return b ? b.innerHTML : null; })(),
+      segment: (function () { var s = el("segmentNote"); return s ? s.innerHTML : null; })(),
+      btnEven: (function () { var b = el("btnEven") || el("btnSE"); return b ? b.innerHTML : null; })(),
+      btnOdd: (function () { var b = el("btnOdd") || el("btnNW"); return b ? b.innerHTML : null; })() };
+  }
+  var lb = el("liveBanner");
+  if (!liveMode()) {
+    if (lb) lb.classList.add("hidden");
+    var vb0 = el("verifyBanner");
+    if (vb0 && liveOrig.banner !== null) vb0.innerHTML = liveOrig.banner;
+    var sn0 = el("segmentNote");
+    if (sn0 && liveOrig.segment !== null) sn0.innerHTML = liveOrig.segment;
+    var be0 = el("btnEven") || el("btnSE");
+    if (be0 && liveOrig.btnEven !== null) be0.innerHTML = liveOrig.btnEven;
+    var bo0 = el("btnOdd") || el("btnNW");
+    if (bo0 && liveOrig.btnOdd !== null) bo0.innerHTML = liveOrig.btnOdd;
+    if (document.title !== undefined && liveOrig.title) document.title = liveOrig.title;
+    return;
+  }
+  if (lb) {
+    lb.classList.remove("hidden");
+    lb.textContent = LIVE.status === "loading"
+      ? "Live lookup \u2014 " + (LIVE.streetName || "") + ". Reading the city\u2019s signs\u2026"
+      : "Live lookup \u2014 " + (LIVE.streetName || "") + ". City data, not a verified page.";
+  }
+  var vb = el("verifyBanner");
+  if (vb) vb.innerHTML = liveVerifyBannerHtml();
+  var sn = el("segmentNote");
+  if (sn) sn.innerHTML = liveSegmentNoteHtml();
+  var be = el("btnEven") || el("btnSE");
+  if (be) be.innerHTML = "Even numbers side";
+  var bo = el("btnOdd") || el("btnNW");
+  if (bo) bo.innerHTML = "Odd numbers side";
+  if (document.title !== undefined && LIVE.streetName) {
+    document.title = "Ticket Saver \u2014 street cleaning, " + LIVE.streetName;
+  }
+  if (LIVE.status === "ready") {
+    var a2 = document.querySelectorAll(".asOf2");
+    for (var i = 0; i < a2.length; i++) a2[i].textContent = LIVE.dataAsOf || "unknown";
+  }
+}
+function liveNearestKnownStreetDist(lat, lon) {
+  var streets = (typeof DATA !== "undefined" && DATA) ? DATA.streets : null;
+  if (!streets || !streets.length) return null;
+  var best = null;
+  for (var i = 0; i < streets.length; i++) {
+    var d = streetDistM(lat, lon, streets[i]);
+    if (best === null || d < best) best = d;
+  }
+  return best;
+}
+function liveIsBakedStreetName(name) {
+  var streets = (typeof DATA !== "undefined" && DATA) ? DATA.streets : null;
+  if (!streets || !name) return false;
+  var lower = String(name).toLowerCase();
+  for (var i = 0; i < streets.length; i++) {
+    if (String(streets[i].name).toLowerCase() === lower) return true;
+  }
+  return false;
+}
+function liveWillSwitch(url) {
+  if (!url) return false;
+  try {
+    var key = "ticketSaver.switched.v1." + currentSlug() + ".to." + url;
+    if (typeof sessionStorage !== "undefined" && sessionStorage.getItem(key)) return false;
+  } catch (e) { /* no session storage — assume the switch happens */ }
+  return true;
+}
+function liveSetIdle() {
+  if (LIVE.status !== "idle") {
+    LIVE = { status: "idle", streetName: null, streetSlug: null, houseNumber: null,
+      houseLat: null, houseLon: null, sides: null, counts: null, segment: null,
+      sideMethod: null, idTrc: null, dataAsOf: null, errorTitle: null, errorDetail: null,
+      geoDisagreement: false };
+    if (typeof renderAll === "function") renderAll();
+  }
+}
+function liveSetError(status, title, detail) {
+  LIVE.status = status; LIVE.errorTitle = title; LIVE.errorDetail = detail; LIVE.sides = null;
+  if (typeof renderAll === "function") renderAll();
+}
+function liveMaybeLookup(lat, lon, feature) {
+  if (typeof lastFix === "undefined" || !lastFix) return;
+  if (lastFix.lat !== lat || lastFix.lon !== lon) return; /* a newer fix arrived — it owns the lookup */
+  var lim = (typeof DATA !== "undefined" && DATA && DATA.street_switch_m) || 300;
+  var near = liveNearestKnownStreetDist(lat, lon);
+  if (near !== null && near <= lim) { liveSetIdle(); return; } /* baked street — its own page/data rules */
+  if (!feature) {
+    liveSetError("error-street", "Couldn't name this street",
+      "The street name didn't come back, so no lookup ran. Read the sign where you park.");
+    return;
+  }
+  var h = liveHouseFromFeature(feature);
+  if (!h || !h.street) {
+    liveSetError("error-street", "Couldn't name this street",
+      "The street name didn't come back, so no lookup ran. Read the sign where you park.");
+    return;
+  }
+  if (liveIsBakedStreetName(h.street)) { liveSetIdle(); return; }
+  if (!h.number) {
+    liveSetError("error-side", "Couldn't tell which side",
+      "No house number came back for this street, so no side could be placed. Read the sign where you park.");
+    return;
+  }
+  liveRunLookup({ lat: lat, lon: lon, streetName: h.street, houseNumber: h.number,
+    houseLat: h.point ? h.point.lat : null, houseLon: h.point ? h.point.lon : null });
+}
+
+/* ---- network: fetch with backoff, CKAN, Overpass, Photon forward search ---- */
+function liveSleep(ms) {
+  return new Promise(function (res) { setTimeout(res, ms); });
+}
+function liveFetchWithRetry(url, options, maxAttempts) {
+  function attempt(n) {
+    return fetch(url, options).then(function (res) {
+      if (res.ok) return res;
+      if ((res.status === 502 || res.status === 503 || res.status === 504 || res.status === 429) && n < maxAttempts) {
+        return liveSleep(800 * n).then(function () { return attempt(n + 1); });
+      }
+      throw new Error("HTTP " + res.status);
+    }, function (err) {
+      if (n < maxAttempts) return liveSleep(800 * n).then(function () { return attempt(n + 1); });
+      throw err;
+    });
+  }
+  return attempt(1);
+}
+function liveCkanSql(sql) {
+  return liveFetchWithRetry(LIVE_CKAN + "datastore_search_sql",
+    { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "sql=" + encodeURIComponent(sql) }, 2)
+    .then(function (res) { return res.json(); })
+    .then(function (j) {
+      if (!j || !j.success || !j.result || !j.result.records) throw new Error("CKAN datastore_search_sql failed");
+      return j.result.records;
+    });
+}
+function liveCkanPackage() {
+  return liveFetchWithRetry(LIVE_CKAN + "package_show",
+    { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "id=" + LIVE_SIGN_PKG }, 2)
+    .then(function (res) { return res.json(); })
+    .then(function (j) {
+      if (!j || !j.success || !j.result) throw new Error("CKAN package_show failed");
+      return j.result;
+    });
+}
+function liveOverpassLookup(streetName, lat, lon) {
+  var q = liveOverpassQuery(streetName, lat, lon);
+  var opts = { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "data=" + encodeURIComponent(q) };
+  var urls = [LIVE_OVERPASS_URLS[0], LIVE_OVERPASS_URLS[1]];
+  var tries = [2, 1]; /* 3 attempts total: two on the primary, one on the fallback */
+  var chain = Promise.resolve();
+  var result = null, lastErr = null;
+  urls.forEach(function (url, u) {
+    chain = chain.then(function () {
+      if (result) return;
+      return liveFetchWithRetry(url, opts, tries[u])
+        .then(function (res) { return res.json(); })
+        .then(function (j) {
+          if (j && j.elements && j.elements.length) {
+            result = { ways: j.elements.filter(function (e) { return e.type === "way"; }) };
+          } else { lastErr = new Error("empty Overpass response"); }
+        })
+        .catch(function (e) { lastErr = e; });
+    });
+  });
+  return chain.then(function () {
+    if (result) return result;
+    throw { liveError: "error-map", title: "Couldn't read the street map",
+      detail: "The street map didn't load, so no windows can be shown. Read the sign where you park." };
+  });
+}
+function liveHousePointViaSearch(number, streetName) {
+  var url = LIVE_PHOTON_SEARCH + encodeURIComponent(number + " " + streetName + ", Montreal") + "&limit=5";
+  return liveFetchWithRetry(url, {}, 2)
+    .then(function (res) { return res.json(); })
+    .then(function (j) {
+      var feats = (j && j.features) || [];
+      for (var i = 0; i < feats.length; i++) {
+        var f = feats[i], p = f.properties || {};
+        if (liveParseHouseNumber(p.housenumber) !== number) continue;
+        if (f.geometry && f.geometry.type === "Point" && f.geometry.coordinates) {
+          return { lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0] };
+        }
+      }
+      return null;
+    })
+    .catch(function () { return null; });
+}
+
+/* ---- the lookup itself (async; returns the result object for tests) ---- */
+function liveRunLookup(fix) {
+  var key = liveSlug(fix.streetName) + "|" + fix.houseNumber;
+  if (LIVE_LOADING && LIVE_LOADING.key === key) return LIVE_LOADING.promise;
+  var p = liveRunLookupInner(fix);
+  LIVE_LOADING = { key: key, promise: p };
+  p.then(function () { if (LIVE_LOADING && LIVE_LOADING.key === key) LIVE_LOADING = null; },
+    function () { if (LIVE_LOADING && LIVE_LOADING.key === key) LIVE_LOADING = null; });
+  return p;
+}
+async function liveRunLookupInner(fix) {
+  var slug = liveSlug(fix.streetName);
+  LIVE = { status: "loading", streetName: fix.streetName, streetSlug: slug,
+    houseNumber: fix.houseNumber, houseLat: fix.houseLat, houseLon: fix.houseLon,
+    sides: null, counts: null, segment: null, sideMethod: null, idTrc: null,
+    dataAsOf: null, errorTitle: null, errorDetail: null, geoDisagreement: false };
+  if (typeof renderAll === "function") renderAll();
+  try {
+    if (typeof fetch === "undefined") {
+      throw { liveError: "error-data", title: "Couldn't read the city's signs",
+        detail: "This browser can't reach the city's data. Read the sign where you park." };
+    }
+    var candidate = liveNomVoieCandidate(fix.streetName);
+    var geoRows = [];
+    try { geoRows = await liveCkanSql(liveGeobaseSql(candidate)); } catch (e) { geoRows = []; }
+    var geoHit = liveGeobaseHit(geoRows, fix.houseNumber);
+    var dataAsOf = null;
+    try {
+      var pkg = await liveCkanPackage();
+      dataAsOf = (pkg.metadata_modified || pkg.metadata_created || "").slice(0, 10) || null;
+    } catch (e) { dataAsOf = null; }
+    var cacheKey = liveCacheKey(slug, geoHit ? geoHit.idTrc : null, fix.houseNumber);
+    var cached = liveCacheRead(cacheKey);
+    if (cached && dataAsOf && cached.dataAsOf === dataAsOf) {
+      liveApplyResult(cached.result, dataAsOf);
+      return cached.result;
+    }
+    if (cached && !dataAsOf) { /* dataset date unknown — a fresh-enough cache is the best available */
+      liveApplyResult(cached.result, cached.dataAsOf);
+      return cached.result;
+    }
+    var houseLat = fix.houseLat, houseLon = fix.houseLon;
+    if (houseLat === null || houseLon === null) {
+      var pt = await liveHousePointViaSearch(fix.houseNumber, fix.streetName);
+      if (!pt) {
+        throw { liveError: "error-side", title: "Couldn't tell which side",
+          detail: "The house couldn't be placed on the street map, so no side could be placed. Read the sign where you park." };
+      }
+      houseLat = pt.lat; houseLon = pt.lon;
+    }
+    var over = await liveOverpassLookup(fix.streetName, fix.lat, fix.lon);
+    var chain = liveChainStreetWays(over.ways, fix.streetName, fix.lat, fix.lon);
+    if (!chain) {
+      throw { liveError: "error-map", title: "Couldn't read the street map",
+        detail: "No road matching this street came back from the map, so no windows can be shown. Read the sign where you park." };
+    }
+    var crossWays = over.ways.filter(function (w) {
+      var t = w.tags || {};
+      return !chain.streetWayIds[w.id] && (t.name || "").toLowerCase() !== String(fix.streetName).toLowerCase()
+        && ["footway", "path", "cycleway", "steps", "pedestrian"].indexOf(t.highway) < 0;
+    });
+    var signs = await liveCkanSql(liveCkanSignsSql(fix.lat, fix.lon));
+    var codes = [];
+    signs.forEach(function (s) { if (s.CODE_RPA && codes.indexOf(s.CODE_RPA) < 0) codes.push(s.CODE_RPA); });
+    var canon = liveRpaCacheGet(codes);
+    var missing = codes.filter(function (c) { return canon[c] === undefined; });
+    if (missing.length) {
+      try {
+        var rows = await liveCkanSql(liveRpaSql(missing));
+        rows.forEach(function (r) { canon[r.CODE_RPA] = r.DESCRIPTION_RPA; });
+        liveRpaCacheSave(canon);
+      } catch (e) { /* keep the cached subset — codes still missing stay ambiguous, honestly */ }
+    }
+    var result = liveBuildResult({ signs: signs, canonByCode: canon, chain: chain,
+      crossWays: crossWays, houseLat: houseLat, houseLon: houseLon,
+      houseNumber: fix.houseNumber, streetName: fix.streetName, dataAsOf: dataAsOf, geoHit: geoHit });
+    if (result.status !== "ok") {
+      throw { liveError: result.error, title: "Couldn't tell which side",
+        detail: "The house couldn't be placed on the street map, so no side could be placed. Read the sign where you park." };
+    }
+    liveCacheSave(cacheKey, { streetName: fix.streetName, streetSlug: slug,
+      houseNumber: fix.houseNumber, dataAsOf: dataAsOf, savedAt: Date.now(), result: result });
+    liveApplyResult(result, dataAsOf);
+    return result;
+  } catch (err) {
+    var e2 = (err && err.liveError) ? err : { liveError: "error-data",
+      title: "Couldn't read the city's signs",
+      detail: "The city's signage data didn't load, so no windows can be shown. Read the sign where you park." };
+    LIVE.status = e2.liveError; LIVE.errorTitle = e2.title; LIVE.errorDetail = e2.detail; LIVE.sides = null;
+    if (typeof renderAll === "function") renderAll();
+    return { status: "error", error: e2.liveError };
+  }
+}
+function liveApplyResult(result, dataAsOf) {
+  LIVE.status = "ready"; LIVE.sides = result.sides; LIVE.counts = result.counts;
+  LIVE.segment = result.segment; LIVE.sideMethod = result.sideMethod;
+  LIVE.idTrc = result.idTrc; LIVE.dataAsOf = dataAsOf || result.dataAsOf || null;
+  LIVE.geoDisagreement = !!result.geoDisagreement;
+  LIVE.houseLat = result.houseLat || LIVE.houseLat; LIVE.houseLon = result.houseLon || LIVE.houseLon;
+  if (typeof renderAll === "function") renderAll();
+}
+
 /* Test hook (also handy in the console): pure date/.ics logic. */
 if (typeof window !== "undefined") {
   window.__ticketSaver = { nextWindow: nextWindow, buildIcs: buildIcs,
@@ -1072,12 +2025,30 @@ if (typeof window !== "undefined") {
     limitForSide: limitForSide,
     getLimitTimer: getLimitTimer, saveLimitTimer: saveLimitTimer,
     clearLimitTimer: clearLimitTimer, LIMIT_KEY: LIMIT_KEY, LIMIT_OPTIONS: LIMIT_OPTIONS,
-    showDetails: showDetails, showMain: showMain, swipeDirection: swipeDirection,
+    showDetails: showDetails, showMain: showMain, renderAll: renderAll, swipeDirection: swipeDirection,
     keyTarget: keyTarget, limitRowLabel: limitRowLabel,
     setSelectedSide: setSelectedSide, getSelectedSide: getSelectedSide, toggleParked: toggleParked,
     shouldSwitchStreet: shouldSwitchStreet, currentSlug: currentSlug,
     parsePhoton: parsePhoton, photonLabel: photonLabel, geoNeedsLookup: geoNeedsLookup,
-    renderGpsRow: renderGpsRow,
+    renderGpsRow: renderGpsRow, reverseGeocode: reverseGeocode, liveMode: liveMode, liveActiveSides: liveActiveSides,
+    liveActiveSideKeys: liveActiveSideKeys, liveParseSign: liveParseSign,
+    liveBuildResult: liveBuildResult, liveChainStreetWays: liveChainStreetWays,
+    liveDeriveSegment: liveDeriveSegment, liveAssembleSides: liveAssembleSides,
+    liveNomVoieCandidate: liveNomVoieCandidate, liveParseHouseNumber: liveParseHouseNumber,
+    liveHouseFromFeature: liveHouseFromFeature, liveCacheKey: liveCacheKey,
+    liveSlug: liveSlug, liveMaybeLookup: liveMaybeLookup, liveRunLookup: liveRunLookup,
+    liveWillSwitch: liveWillSwitch, liveNearestKnownStreetDist: liveNearestKnownStreetDist,
+    liveSideKey: liveSideKey, liveDefaultSide: liveDefaultSide,
+    liveMarkSideButtons: liveMarkSideButtons, liveRenderChrome: liveRenderChrome,
+    liveSideCardsHtml: liveSideCardsHtml, liveOverpassQuery: liveOverpassQuery,
+    liveCkanSignsSql: liveCkanSignsSql, liveRpaSql: liveRpaSql, liveGeobaseSql: liveGeobaseSql,
+    liveGeobaseHit: liveGeobaseHit, liveSnap: liveSnap, liveCumAlong: liveCumAlong,
+    liveAlongFromSnap: liveAlongFromSnap,
+    liveCacheRead: liveCacheRead, liveCacheSave: liveCacheSave,
+    liveRpaCacheGet: liveRpaCacheGet, liveRpaCacheSave: liveRpaCacheSave,
+    liveSetIdle: liveSetIdle, liveSetError: liveSetError,
+    liveGetState: function () { return LIVE; },
+    liveSetState: function (s) { LIVE = s; },
     _setGpsState: function (fix, lookup) { lastFix = fix; geoLookup = lookup; },
     _getGpsState: function () { return { fix: lastFix, lookup: geoLookup }; },
     currentView: function () { return view; } };
