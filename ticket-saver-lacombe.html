@@ -606,6 +606,11 @@ function renderSideCards() {
     } else {
       html += '<div style="font-size:20px;font-weight:700;margin-top:4px">Not established for this side yet — the data doesn&rsquo;t say</div>'
         + '<div class="note">' + esc(s.reason) + '</div>';
+      (s.field_photos || []).forEach(function (fp) {
+        html += '<div class="sign"><span class="note">' + esc(fp.photo_note || "") + '</span>'
+          + (fp.photo_url ? '<br><a href="' + esc(fp.photo_url) + '" target="_blank" rel="noopener">See the sign photo</a>' : '')
+          + '</div>';
+      });
     }
     if (s.permanent_ban_note) {
       html += '<div class="warnline">' + esc(s.permanent_ban_note) + '</div>';

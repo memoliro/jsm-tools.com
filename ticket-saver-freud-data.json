@@ -7,8 +7,8 @@
   "verified": false,
   "scope": "No cleaning window can be shown — the Montreal signage dataset contains no signs for this street.",
   "date": "2026-11-17",
-  "method": "Géobase-double sides only. Signage coverage checked live: 0 records within ~400 m of 5950 Av Freud; 9 records in the wider box, all ~700 m north in Côte-des-Neiges–Notre-Dame-de-Grâce, none on Freud.",
-  "still_owed": "On-site photos of every parking sign on both sides of Av Freud — the signs themselves are the only source.",
+  "method": "Géobase-double sides only. Signage coverage checked live: 0 records within ~400 m of 5950 Av Freud; 9 records in the wider box, all ~700 m north in Côte-des-Neiges–Notre-Dame-de-Grâce, none on Freud. Field photos Nov 17, 2026: the signs on BOTH sides are covered with black bags, so no rule can be read from either pole.",
+  "still_owed": "Both sides photographed Nov 17, 2026 — both signs bagged, no rule readable. Re-photograph when the bags come off; a rule only exists once the sign face is readable.",
   "coverage": "Côte Saint-Luc is a separate municipality from the City of Montreal. Its street signage is not in the City of Montreal open-data signage set (stationnement sur rue — signalisation courante). Géobase double does cover the street sides (NOM_VILLE CSL, ID_TRC 1602798), so side identification works; cleaning windows do not."
  },
  "season_reading": "Season dates are INCLUSIVE both ends: a window applies on Apr 1 and on Dec 1 themselves when that date falls on a cleaning weekday. The countdown and the .ics export use this same reading.",
@@ -99,7 +99,13 @@
    "permanent_ban_signs": [],
    "status": "not_established",
    "windows": [],
-   "reason": "No cleaning sign for this side passed the segment + band + intersection checks in the city's signage data. Cleaning signs attributed to this side in the segment: 0. The data may be incomplete."
+   "reason": "No cleaning sign for this side passed the segment + band + intersection checks in the city's signage data. Cleaning signs attributed to this side in the segment: 0. The data may be incomplete.",
+   "field_photos": [
+    {
+     "photo_url": "assets/freud-even-bagged-sign.jpg",
+     "photo_note": "Photographed by memoli Nov 17, 2026 — the sign on this side is covered with a black bag, so no rule can be read from it and no restriction is in effect from this pole."
+    }
+   ]
   },
   "odd": {
    "label": "Odd numbers side",
@@ -109,7 +115,13 @@
    "permanent_ban_signs": [],
    "status": "not_established",
    "windows": [],
-   "reason": "No cleaning sign for this side passed the segment + band + intersection checks in the city's signage data. Cleaning signs attributed to this side in the segment: 0. The data may be incomplete."
+   "reason": "No cleaning sign for this side passed the segment + band + intersection checks in the city's signage data. Cleaning signs attributed to this side in the segment: 0. The data may be incomplete.",
+   "field_photos": [
+    {
+     "photo_url": "assets/freud-odd-bagged-sign.jpg",
+     "photo_note": "Photographed by memoli Nov 17, 2026 — the sign on this side is covered with a black bag, so no rule can be read from it and no restriction is in effect from this pole."
+    }
+   ]
   }
  },
  "streets": [
