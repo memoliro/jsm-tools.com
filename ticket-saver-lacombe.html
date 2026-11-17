@@ -45,6 +45,21 @@
   #heroCard.next .big, #heroCard.next .count { font-size: 26px; }
   .now { background: var(--now-bg); border-color: #f3c98f; }
   .now .count, .now .big { color: var(--now-ink); }
+  /* Phase 2 warnings: two visual steps as the binding deadline approaches
+     (30 min, then 15 min). In-palette amber only — warn15 is the deeper one. */
+  #heroCard.warn30 { border-color: #d97706; }
+  #heroCard.warn30 .count, #heroCard.warn30 .big { color: var(--amber-ink); }
+  #heroCard.warn15 { background: var(--now-bg); border-color: #b45309; }
+  #heroCard.warn15 .count, #heroCard.warn15 .big { color: var(--now-ink); }
+  /* Phase 2 verdict: one plain bold line, body size, same as the rest. */
+  #heroVerdict { font-size: 18px; font-weight: 700; margin-top: 8px; }
+  .verdict { font-size: 18px; font-weight: 700; margin-top: 4px; }
+  .planinputs { display: flex; gap: 10px; margin-top: 10px; }
+  .planinputs input { flex: 1 1 0; min-width: 0; font-family: inherit; font-size: 18px;
+             padding: 12px 8px; border: 2px solid var(--line); border-radius: 12px;
+             background: var(--card); color: var(--ink); text-align: center; }
+  .planinputs input:focus-visible { outline: none; border-color: var(--accent);
+             box-shadow: 0 0 0 1px rgba(49,196,141,.35), 0 18px 50px rgba(49,196,141,.35), 0 8px 30px rgba(49,196,141,.25); }
   .sidebtn { display: block; width: 100%; text-align: center; background: var(--card);
              border: 2px solid var(--line); border-radius: 14px; padding: 14px;
              font-size: 20px; font-weight: 700; color: var(--ink); cursor: pointer;
@@ -131,6 +146,7 @@
     <div class="big" id="heroTitle">—</div>
     <div class="count" id="heroCount">—</div>
     <div id="heroDetail" style="font-size:17px"></div>
+    <div id="heroVerdict" class="hidden"></div>
     <div style="margin-top:10px;text-align:center">
       <button class="action primary" id="parkedToggle">Parked</button>
     </div>
@@ -160,6 +176,17 @@
         <button class="action" id="limitClear">Clear &mdash; I&rsquo;m back</button>
       </div>
     </div>
+    </div>
+  </div>
+
+  <div class="card" id="planCard">
+    <button class="limitrow" id="planToggle" aria-expanded="false"><span id="planToggleText">Plan ahead &mdash; check a future day &amp; time</span><span class="chev" aria-hidden="true">&rsaquo;</span></button>
+    <div id="planBody" class="hidden">
+      <div class="planinputs">
+        <input type="date" id="planDate" aria-label="Day">
+        <input type="time" id="planTime" aria-label="Time">
+      </div>
+      <div id="planResult" style="font-size:18px;margin-top:10px"></div>
     </div>
   </div>
 
@@ -432,12 +459,7 @@ function parseHM(s) { var a = String(s).split(":"); return { h: +a[0], mi: +a[1]
    (9 poles). A side with no verified limit gets no anchoring and no
    auto-arm — its timer keeps the old tap-is-start behavior. Returns null
    when no side is picked or that side has no verified limit. */
-function limitForSide() {
-  if (liveMode()) return null; /* live streets have no limits in the lookup — manual timer only */
-  var lims = (typeof DATA !== "undefined" && DATA) ? DATA.limits : null;
-  if (!lims) return null;
-  return lims[getSelectedSide()] || null;
-}
+function limitForSide() { return limitForSideKey(getSelectedSide()); }
 /* Anchoring: the posted limit only runs inside its hours (limitForSide():
    { days: [0..6] (JS: 0=Sun), start: "09:00", end: "18:00", minutes: 120 }
    in America/Toronto wall time). A tile tapped before the window opens starts
@@ -445,8 +467,7 @@ function limitForSide() {
    2 hours at 9:00, not at the tap. Inside the window it starts now; after
    the window (or on a non-limit day) it starts at the next window open.
    Without a limit for the picked side the tap is the start (old behavior). */
-function anchorLimitStart(nowMs) {
-  var lim = limitForSide();
+function anchorLimitStartFor(lim, nowMs) {
   if (!lim || !lim.days || !lim.start || !lim.end) return nowMs;
   var st = parseHM(lim.start), en = parseHM(lim.end);
   var p = tzParts(new Date(nowMs));
@@ -462,6 +483,7 @@ function anchorLimitStart(nowMs) {
   }
   return nowMs; /* unreachable with a non-empty days list, but never loop forever */
 }
+function anchorLimitStart(nowMs) { return anchorLimitStartFor(limitForSide(), nowMs); }
 /* Auto-arm (his call Nov 17): the timer starts itself — no tile tap. On load,
    if no timer is saved and the posted limit opens later today, arm the
    posted-limit timer at today's window start. It keeps counting until he taps
@@ -562,6 +584,8 @@ function renderSideCards() {
   liveActiveSideKeys().forEach(function (key) {
     var s = liveActiveSides()[key];
     html += '<div class="card"><div class="label">' + esc(s.label) + '</div>';
+    var v = verdictForSide(key, Date.now(), parkedAtForVerdict(key));
+    if (v) html += '<div class="verdict">' + esc(v.text) + '</div>';
     if (s.status === "established") {
       s.windows.forEach(function (w) {
         html += '<div style="font-size:21px;font-weight:700;margin-top:4px">' + esc(windowHeadline(w)) + '</div>';
@@ -655,18 +679,153 @@ function toggleParked(nowMs) {
 /* A side can carry more than one genuine window (Lacombe even: Tue 10-11 from
    the data + Tue 12-14 from a photo). The hero counts down to the nearest one;
    a window that is live right now wins over a later one. */
-function nextWindowForSide(key, now) {
-  var s = liveActiveSides()[key];
-  if (!s || s.status !== "established" || !s.windows || !s.windows.length) return null;
+function nextWindowForSideData(side, now) {
+  if (!side || side.status !== "established" || !side.windows || !side.windows.length) return null;
   var best = null;
-  for (var i = 0; i < s.windows.length; i++) {
-    var nw = nextWindow(s.windows[i], now);
+  for (var i = 0; i < side.windows.length; i++) {
+    var nw = nextWindow(side.windows[i], now);
     if (!nw) continue;
-    if (nw.state === "now") return { win: s.windows[i], nw: nw };
-    if (!best || nw.start.getTime() < best.nw.start.getTime()) best = { win: s.windows[i], nw: nw };
+    if (nw.state === "now") return { win: side.windows[i], nw: nw };
+    if (!best || nw.start.getTime() < best.nw.start.getTime()) best = { win: side.windows[i], nw: nw };
   }
   return best;
 }
+function nextWindowForSide(key, now) { return nextWindowForSideData(liveActiveSides()[key], now); }
+/* ---- one verdict (Phase 2): a single plain-language line per side ----
+   verdictForSideData(side, lim, evalMs, parkedAtMs, isFuture) is pure:
+   side is a DATA.sides entry (baked or live — both flow through
+   liveActiveSides(), so baked and live share this one implementation),
+   lim is that side's posted limit object (null when the side has none,
+   and always null in live mode). evalMs is the moment the verdict is
+   about ("now" on the main screen, the chosen time in plan-ahead);
+   parkedAtMs is when the car was parked — the renderers pass the running
+   limit timer's parkedAt for the picked side (the timer knows), otherwise
+   the verdict reads as "if you park at the eval time". Returns null when
+   no verdict can be stated honestly (side not established / ambiguous /
+   conflict) — the page then says so plainly via the status text instead.
+   Priority, highest first: (a) whole-side no-stopping (see below);
+   (b) cleaning running now; (c)/(d) the BINDING deadline — the sooner of
+   the next cleaning start and the posted-limit expiry (tie: cleaning);
+   (e) a permit exception is stated, never silently applied (the rule is
+   always given as applying to you — the conservative reading).
+   (a) is gated on an explicit side-level flag `no_stopping_whole_side`:
+   no-stopping panels (\A EN TOUT TEMPS) alone NEVER trigger it, because
+   each panel's reach is set by its arrow (FLECHE_PAN, undecodable) — the
+   data cannot say whether they cover the whole side or only short
+   stretches, and the SE panels cluster at the segment end near the
+   intersection. A whole-side ban needs whole-side evidence in the data. */
+function limitForSideKey(key) {
+  if (liveMode()) return null; /* live streets have no limits in the lookup — manual timer only */
+  var lims = (typeof DATA !== "undefined" && DATA) ? DATA.limits : null;
+  if (!lims) return null;
+  return lims[key] || null;
+}
+function limitAdjective(minutes) {
+  if (minutes === 15) return "15-minute";
+  if (minutes === 60) return "1-hour";
+  if (minutes === 120) return "2-hour";
+  if (minutes === 240) return "4-hour";
+  return minutes + "-minute";
+}
+function limitExpiryMs(lim, parkedAtMs) {
+  return anchorLimitStartFor(lim, parkedAtMs) + lim.minutes * 60000;
+}
+function fmtDayTime(ms) {
+  var p = tzParts(new Date(ms));
+  return DAY_SHORT[p.wd] + " " + fmtTimeToronto(new Date(ms));
+}
+function permitSuffix(code) {
+  if (!code) return "";
+  var m = /^SECTEUR (\d+)$/.exec(String(code));
+  if (m) return " Resident-permit holders (sector " + m[1] + ") excepted.";
+  if (String(code) === "S3R") return " Resident-permit holders excepted.";
+  return " Permit holders excepted.";
+}
+function bindingDeadlineForSideData(side, lim, evalMs, parkedAtMs) {
+  if (!side || side.status !== "established" || !side.windows || !side.windows.length) return null;
+  if (side.no_stopping_whole_side) return null; /* cannot park at all — no deadline to count to */
+  var parked = (typeof parkedAtMs === "number") ? parkedAtMs : evalMs;
+  var r = nextWindowForSideData(side, new Date(evalMs));
+  var cleanDl = null;
+  if (r) {
+    if (r.nw.state === "now") cleanDl = r.nw.end.getTime();
+    else if (r.nw.state === "next") cleanDl = r.nw.start.getTime();
+  }
+  var limDl = lim ? limitExpiryMs(lim, parked) : null;
+  if (cleanDl === null && limDl === null) return null;
+  if (limDl === null || (cleanDl !== null && cleanDl <= limDl)) return { deadlineMs: cleanDl, binds: "cleaning" };
+  return { deadlineMs: limDl, binds: "limit" };
+}
+function verdictForSideData(side, lim, evalMs, parkedAtMs, isFuture) {
+  if (!side || side.status !== "established" || !side.windows || !side.windows.length) return null;
+  if (side.no_stopping_whole_side) {
+    return { kind: "no_stop", text: "Cannot park here at all — no stopping at any time.",
+             deadlineMs: null, binds: null };
+  }
+  var moveNow = isFuture ? "Move then — " : "Move now — ";
+  var parked = (typeof parkedAtMs === "number") ? parkedAtMs : evalMs;
+  var r = nextWindowForSideData(side, new Date(evalMs));
+  var binding = bindingDeadlineForSideData(side, lim, evalMs, parkedAtMs);
+  if (r && r.nw.state === "now") {
+    return { kind: "cleaning_now",
+             text: moveNow + "cleaning until " + fmtTimeToronto(r.nw.end) + "." + permitSuffix(r.win.exception),
+             deadlineMs: binding ? binding.deadlineMs : r.nw.end.getTime(),
+             binds: binding ? binding.binds : "cleaning" };
+  }
+  var limitExpiry = lim ? limitExpiryMs(lim, parked) : null;
+  if (limitExpiry !== null && limitExpiry <= evalMs) {
+    return { kind: "limit_expired",
+             text: moveNow + "your " + limitAdjective(lim.minutes) + " limit ended at "
+               + fmtTimeToronto(new Date(limitExpiry)) + "." + permitSuffix(lim.exception),
+             deadlineMs: limitExpiry, binds: "limit" };
+  }
+  var cleanStart = (r && r.nw.state === "next") ? r.nw.start.getTime() : null;
+  if (limitExpiry !== null && (cleanStart === null || limitExpiry < cleanStart)) {
+    return { kind: "limit",
+             text: "Move by " + fmtDayTime(limitExpiry) + " — " + limitAdjective(lim.minutes)
+               + " limit." + permitSuffix(lim.exception),
+             deadlineMs: limitExpiry, binds: "limit" };
+  }
+  if (cleanStart !== null) {
+    return { kind: "cleaning_soon",
+             text: "You're fine until " + fmtDayTime(cleanStart) + "." + permitSuffix(r.win.exception),
+             deadlineMs: cleanStart, binds: "cleaning" };
+  }
+  if (r && r.nw.state === "season_over" && r.win) {
+    return { kind: "season", text: "No cleaning until " + seasonStartLabel(r.win) + ".",
+             deadlineMs: null, binds: null };
+  }
+  return null; /* established side, but no next window could be computed — never guess */
+}
+function verdictForSide(key, evalMs, parkedAtMs, isFuture) {
+  return verdictForSideData(liveActiveSides()[key], limitForSideKey(key), evalMs, parkedAtMs, isFuture);
+}
+function bindingDeadlineForSide(key, evalMs, parkedAtMs) {
+  return bindingDeadlineForSideData(liveActiveSides()[key], limitForSideKey(key), evalMs, parkedAtMs);
+}
+/* Two visual warning states on the hero countdown, at exactly 30 and again
+   at 15 minutes before the binding deadline (cleaning start/end or limit
+   expiry, whichever binds). Visual only — the app has no push. Outside the
+   30-minute zone the hero is unchanged (in particular no far-future
+   counter: his Nov 17 ruling stands). */
+function heroWarningStateForData(side, lim, nowMs, parkedAtMs) {
+  var b = bindingDeadlineForSideData(side, lim, nowMs, parkedAtMs);
+  if (!b) return { level: "none", deadlineMs: null, binds: null, remainingMs: null };
+  var rem = b.deadlineMs - nowMs;
+  var level = rem <= 15 * 60000 ? "warn15" : (rem <= 30 * 60000 ? "warn30" : "none");
+  return { level: level, deadlineMs: b.deadlineMs, binds: b.binds, remainingMs: rem };
+}
+function heroWarningState(key, nowMs, parkedAtMs) {
+  return heroWarningStateForData(liveActiveSides()[key], limitForSideKey(key), nowMs, parkedAtMs);
+}
+/* The running limit timer knows when the car parked; without one the verdict
+   reads as "parked at the eval time". Only the picked side can have a timer. */
+function parkedAtForVerdict(key) {
+  if (!key || key !== getSelectedSide()) return null;
+  var t = getLimitTimer();
+  return t ? t.parkedAt : null;
+}
+
 
 /* Pure hero decision (exposed for tests): what the hero shows for a side at a time.
    Returns { mode, title, count, detail, showIcs, exception }.
@@ -724,6 +883,10 @@ function renderHero() {
     hero.classList.remove("hidden");
     hero.classList.remove("now");
     hero.classList.remove("next");
+    hero.classList.remove("warn30");
+    hero.classList.remove("warn15");
+    var hv0 = el("heroVerdict");
+    if (hv0) { hv0.textContent = ""; hv0.classList.add("hidden"); }
     el("heroTitle").textContent = "Not parked";
     var hc0 = el("heroCount");
     hc0.textContent = "";
@@ -735,14 +898,30 @@ function renderHero() {
   banner.classList.remove("hidden");
   el("parkedSide").textContent = sideLabel(key);
   var st = heroState(key, new Date());
+  var v = verdictForSide(key, Date.now(), parkedAtForVerdict(key));
+  var warn = heroWarningState(key, Date.now(), parkedAtForVerdict(key));
   hero.classList.remove("hidden");
   hero.classList.toggle("now", st.mode === "now");
   hero.classList.toggle("next", st.mode === "next");
+  hero.classList.toggle("warn30", warn.level === "warn30");
+  hero.classList.toggle("warn15", warn.level === "warn15");
   el("heroTitle").textContent = st.title || "—";
   var hc = el("heroCount");
   hc.textContent = st.count || "";
   hc.classList.toggle("hidden", !st.count);
-  el("heroDetail").textContent = st.detail || "";
+  var detailText = st.detail || "";
+  if (warn.level !== "none" && warn.deadlineMs) {
+    var bindsLabel = warn.binds === "limit" ? "limit ends"
+      : (st.mode === "now" ? "cleaning ends" : "cleaning starts");
+    detailText = fmtCountdown(warn.remainingMs) + " left — " + bindsLabel + " "
+      + fmtTimeToronto(new Date(warn.deadlineMs)) + ".";
+  }
+  el("heroDetail").textContent = detailText;
+  var hv = el("heroVerdict");
+  if (hv) {
+    hv.textContent = v ? v.text : "";
+    hv.classList.toggle("hidden", !v);
+  }
   tg.textContent = "Not Parked";
 }
 
@@ -794,6 +973,57 @@ function renderLimit() {
   }
 }
 
+
+/* ---- plan-ahead (Phase 2): "if I park here Sunday, what's the rule?" ----
+   A collapsed card on the main screen. Day + time inputs (native pickers,
+   18 px, centred); the result is the same verdict evaluated at the chosen
+   time, from the same data — never a second implementation. */
+function planChosenMs() {
+  var dEl = el("planDate"), tEl = el("planTime");
+  if (!dEl || !tEl) return null;
+  var dv = dEl.value, tv = tEl.value;
+  if (!dv || !tv) return null;
+  var p = String(dv).split("-"), q = String(tv).split(":");
+  if (p.length !== 3 || q.length < 2) return null;
+  return torontoToUtc(+p[0], +p[1], +p[2], +q[0], +q[1]).getTime();
+}
+function planResultText(nowMs) {
+  var key = getSelectedSide();
+  if (!key) return "Pick your side above first.";
+  var chosen = planChosenMs();
+  if (chosen === null) return "Pick a day and a time.";
+  if (chosen < nowMs) return "That time has passed — pick a future time.";
+  var v = verdictForSide(key, chosen, chosen, true);
+  var when = fmtDateShortToronto(new Date(chosen)) + ", " + fmtTimeToronto(new Date(chosen));
+  if (!v) return when + " — No verified window for this side — the data doesn't say.";
+  return when + " — " + v.text;
+}
+function renderPlanAhead(nowMs) {
+  var res = el("planResult");
+  if (!res) return;
+  var body = el("planBody");
+  if (body && body.classList && body.classList.contains && body.classList.contains("hidden")) return;
+  res.textContent = planResultText(nowMs || Date.now());
+}
+function setPlanOpen(open) {
+  var body = el("planBody");
+  if (!body) return;
+  body.classList.toggle("hidden", !open);
+  var b = el("planToggle");
+  if (b) {
+    b.setAttribute("aria-expanded", open ? "true" : "false");
+    b.classList.toggle("open", open);
+  }
+  if (open) {
+    var now = new Date(), p = tzParts(now);
+    var dEl = el("planDate"), tEl = el("planTime");
+    if (dEl && !dEl.value) dEl.value = p.y + "-" + pad(p.mo) + "-" + pad(p.d);
+    if (tEl && !tEl.value) tEl.value = pad(p.h) + ":" + pad(p.mi);
+    if (dEl) dEl.setAttribute("min", dEl.value || "");
+    renderPlanAhead();
+  }
+}
+
 function renderAll() {
   var a2 = document.querySelectorAll(".asOf2");
   for (var i = 0; i < a2.length; i++) a2[i].textContent = DATA.data_as_of;
@@ -812,6 +1042,7 @@ function renderAll() {
   renderSideCards();
   renderHero();
   renderLimit();
+  renderPlanAhead();
   liveRenderChrome();
 }
 
@@ -1042,6 +1273,13 @@ function init() {
   el("limitToggle").addEventListener("click", function () {
     setLimitOpen(el("limitBody").classList.contains("hidden"));
   });
+  el("planToggle").addEventListener("click", function () {
+    setPlanOpen(el("planBody").classList.contains("hidden"));
+  });
+  ["planDate", "planTime"].forEach(function (id) {
+    var n = el(id);
+    if (n) n.addEventListener("input", function () { renderPlanAhead(); });
+  });
   var tiles = document.querySelectorAll("#limitTiles .limittile");
   for (var i = 0; i < tiles.length; i++) {
     tiles[i].addEventListener("click", function () {
@@ -1107,6 +1345,7 @@ function init() {
   setInterval(function () {
     renderHero();
     try { renderLimit(); } catch (e) { /* a timer fault must never swallow the hero tick */ }
+    try { renderPlanAhead(); } catch (e) { /* a plan-ahead fault must never swallow the hero tick */ }
   }, 30000);
 }
 
@@ -2076,7 +2315,16 @@ if (typeof window !== "undefined") {
     liveSetState: function (s) { LIVE = s; },
     _setGpsState: function (fix, lookup) { lastFix = fix; geoLookup = lookup; },
     _getGpsState: function () { return { fix: lastFix, lookup: geoLookup }; },
-    currentView: function () { return view; }, renderAll: renderAll, renderSideCards: renderSideCards };
+    currentView: function () { return view; }, renderAll: renderAll, renderSideCards: renderSideCards,
+    verdictForSide: verdictForSide, verdictForSideData: verdictForSideData,
+    bindingDeadlineForSide: bindingDeadlineForSide, bindingDeadlineForSideData: bindingDeadlineForSideData,
+    heroWarningState: heroWarningState, heroWarningStateForData: heroWarningStateForData,
+    limitForSideKey: limitForSideKey, anchorLimitStartFor: anchorLimitStartFor,
+    limitExpiryMs: limitExpiryMs, parkedAtForVerdict: parkedAtForVerdict,
+    renderPlanAhead: renderPlanAhead, planResultText: planResultText,
+    planChosenMs: planChosenMs, setPlanOpen: setPlanOpen,
+    nextWindowForSideData: nextWindowForSideData,
+    renderHero: renderHero };
 }
 </script>
 </body>
