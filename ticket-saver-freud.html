@@ -122,8 +122,8 @@
     <div class="big" id="heroTitle">—</div>
     <div class="count" id="heroCount">—</div>
     <div id="heroDetail" style="font-size:17px"></div>
-    <div style="margin-top:10px">
-      <button class="action primary" id="icsBtn">Add to calendar (.ics)</button>
+    <div style="margin-top:10px;text-align:center">
+      <button class="action primary" id="parkedToggle">Parked</button>
     </div>
   </div>
 
@@ -207,6 +207,7 @@ var CENTERLINE = [[45.4784252, -73.670308], [45.4784507, -73.6703811], [45.47846
 var HOME_LAT = DATA.street.home.lat, HOME_LON = DATA.street.home.lon;
 var TZ = "America/Toronto";
 var LS_KEY = "ticketSaver.side." + DATA.street.slug + ".v1";
+var PARKED_DEFAULT_SIDE = "even"; /* the "Parked" tap parks on the even side; the picker below switches sides */
 var DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 var DAY_SHORT = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 var MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -349,6 +350,9 @@ var VTZ_LINES = [
   "DTSTART:19701101T020000", "RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU", "END:STANDARD",
   "END:VTIMEZONE"
 ];
+/* The cleaning-windows .ics builder. The button was removed Nov 17 (his call:
+   "we don't need to add to calendar") — the builder stays, tested, so the
+   export can come back with one button if he ever wants it. */
 function buildIcs(sideKey, win, now) {
   var nw = nextWindow(win, now);
   if (!nw) return null;
@@ -409,15 +413,25 @@ function limitState(parkedAtMs, limitMin, nowMs) {
            limitMin: limitMin, parkedAt: new Date(parkedAtMs) };
 }
 function parseHM(s) { var a = String(s).split(":"); return { h: +a[0], mi: +a[1] }; }
-/* Anchoring: the posted limit only runs inside its hours (DATA.limit:
+/* The posted limit for the picked side (DATA.limits, keyed by side):
+   SE = 2h 09:00-18:00 Mon-Fri (6 poles); NW = 15 min 07:00-18:00 Mon-Fri
+   (9 poles). A side with no verified limit gets no anchoring and no
+   auto-arm — its timer keeps the old tap-is-start behavior. Returns null
+   when no side is picked or that side has no verified limit. */
+function limitForSide() {
+  var lims = (typeof DATA !== "undefined" && DATA) ? DATA.limits : null;
+  if (!lims) return null;
+  return lims[getSelectedSide()] || null;
+}
+/* Anchoring: the posted limit only runs inside its hours (limitForSide():
    { days: [0..6] (JS: 0=Sun), start: "09:00", end: "18:00", minutes: 120 }
    in America/Toronto wall time). A tile tapped before the window opens starts
    the countdown at the window start — a car parked overnight starts its
    2 hours at 9:00, not at the tap. Inside the window it starts now; after
    the window (or on a non-limit day) it starts at the next window open.
-   Without DATA.limit the tap is the start (old behavior). Pure. */
+   Without a limit for the picked side the tap is the start (old behavior). */
 function anchorLimitStart(nowMs) {
-  var lim = (typeof DATA !== "undefined" && DATA) ? DATA.limit : null;
+  var lim = limitForSide();
   if (!lim || !lim.days || !lim.start || !lim.end) return nowMs;
   var st = parseHM(lim.start), en = parseHM(lim.end);
   var p = tzParts(new Date(nowMs));
@@ -438,11 +452,14 @@ function anchorLimitStart(nowMs) {
    posted-limit timer at today's window start. It keeps counting until he taps
    Clear ("I'm back"). After a Clear, nothing re-arms until the next limit
    day's pre-window period — a mid-day park stays manual (tap a tile =
-   "I just parked"). Pure except for the localStorage read. */
+   "I just parked"). Reads localStorage (picked side + saved timer). */
 function maybeAutoArmLimit(nowMs) {
-  if (getLimitTimer()) return null;
-  if (!getSelectedSide()) return null; /* no side picked = he never said he parked here */
-  var lim = (typeof DATA !== "undefined" && DATA) ? DATA.limit : null;
+  var saved = getLimitTimer();
+  if (saved) {
+    if (limitState(saved.parkedAt, saved.limitMin, nowMs).state !== "expired") return null;
+    clearLimitTimer(); /* yesterday's timer is done — it must not block tomorrow's arm */
+  }
+  var lim = limitForSide(); /* null when no side picked or that side has no verified limit */
   if (!lim || !lim.days || !lim.start || !lim.end) return null;
   var p = tzParts(new Date(nowMs));
   if (lim.days.indexOf(p.wd) < 0) return null;
@@ -572,11 +589,28 @@ function renderSideCards() {
 function getSelectedSide() {
   try { return localStorage.getItem(LS_KEY); } catch (e) { return null; }
 }
-function setSelectedSide(key) {
+/* Parking is a single tap: picking a side (or the Parked toggle) says "I parked
+   here" — it also arms the limit timer when the window opens later (no saved
+   timer, pre-window only; maybeAutoArmLimit is a no-op otherwise). Clearing
+   the side ("Not Parked" / the ✕) says "I moved" — it clears the limit timer
+   too, so nothing keeps counting for a car that left. nowMs is test-only;
+   callers pass nothing and it defaults to now. */
+function setSelectedSide(key, nowMs) {
+  nowMs = nowMs || Date.now();
   try {
     if (key) localStorage.setItem(LS_KEY, key); else localStorage.removeItem(LS_KEY);
   } catch (e) { /* private mode — selection just won't persist */ }
+  if (!key) { clearLimitTimer(); }
+  else {
+    var armed = maybeAutoArmLimit(nowMs);
+    if (armed) saveLimitTimer(armed.parkedAt, armed.limitMin);
+  }
   renderAll();
+}
+function toggleParked(nowMs) {
+  nowMs = nowMs || Date.now();
+  if (getSelectedSide()) setSelectedSide(null, nowMs);
+  else setSelectedSide(PARKED_DEFAULT_SIDE, nowMs);
 }
 
 /* Pure hero decision (exposed for tests): what the hero shows for a side at a time.
@@ -618,7 +652,21 @@ function renderHero() {
   var hero = el("heroCard"), banner = el("parkedBanner");
   el("btnEven").classList.toggle("selected", key === "even");
   el("btnOdd").classList.toggle("selected", key === "odd");
-  if (!key) { hero.classList.add("hidden"); banner.classList.add("hidden"); return; }
+  var tg = el("parkedToggle");
+  if (!key) {
+    banner.classList.add("hidden");
+    /* Prompt mode: not parked yet — the hero is the one-tap "Parked" button. */
+    hero.classList.remove("hidden");
+    hero.classList.remove("now");
+    hero.classList.remove("next");
+    el("heroTitle").textContent = "Not parked";
+    var hc0 = el("heroCount");
+    hc0.textContent = "";
+    hc0.classList.add("hidden");
+    el("heroDetail").textContent = "";
+    tg.textContent = "Parked";
+    return;
+  }
   banner.classList.remove("hidden");
   el("parkedSide").textContent = sideLabel(key);
   var st = heroState(key, new Date());
@@ -630,7 +678,7 @@ function renderHero() {
   hc.textContent = st.count || "";
   hc.classList.toggle("hidden", !st.count);
   el("heroDetail").textContent = st.detail || "";
-  el("icsBtn").classList.toggle("hidden", !st.showIcs);
+  tg.textContent = "Not Parked";
 }
 
 /* The limit card stays one row even while a timer runs: the row label carries
@@ -658,7 +706,7 @@ function renderLimit() {
   }
   el("limitToggleText").textContent = limitRowLabel(t, Date.now());
   var an = el("limitAnchorNote");
-  if (an) an.textContent = (typeof DATA !== "undefined" && DATA && DATA.limit)
+  if (an) an.textContent = limitForSide()
     ? "If you tap before the posted hours start, the countdown starts when they start — the limit runs from the sign's hours, not from your tap."
     : "";
   var running = el("limitRunning");
@@ -723,21 +771,6 @@ function checkGps() {
   }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
 }
 
-function exportIcs() {
-  var key = getSelectedSide();
-  if (!key) return;
-  var s = DATA.sides[key];
-  if (s.status !== "established") return;
-  var ics = buildIcs(key, s.windows[0], new Date());
-  if (!ics) return;
-  var blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
-  var a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "ticket-saver-" + key.toLowerCase() + "-" + DATA.street.slug + ".ics";
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-}
 
 function exportLimitIcs() {
   var t = getLimitTimer();
@@ -811,7 +844,7 @@ function init() {
   el("btnEven").addEventListener("click", function () { setSelectedSide("even"); });
   el("btnOdd").addEventListener("click", function () { setSelectedSide("odd"); });
   el("clearSide").addEventListener("click", function () { setSelectedSide(null); });
-  el("icsBtn").addEventListener("click", exportIcs);
+  el("parkedToggle").addEventListener("click", function () { toggleParked(); });
   el("gpsBtn").addEventListener("click", checkGps);
   el("limitToggle").addEventListener("click", function () {
     setLimitOpen(el("limitBody").classList.contains("hidden"));
@@ -886,10 +919,12 @@ if (typeof window !== "undefined") {
     torontoToUtc: torontoToUtc, tzParts: tzParts, inSeason: inSeason, DATA: DATA,
     limitState: limitState, alarmLeadMin: alarmLeadMin, buildLimitIcs: buildLimitIcs,
     anchorLimitStart: anchorLimitStart, maybeAutoArmLimit: maybeAutoArmLimit,
+    limitForSide: limitForSide,
     getLimitTimer: getLimitTimer, saveLimitTimer: saveLimitTimer,
     clearLimitTimer: clearLimitTimer, LIMIT_KEY: LIMIT_KEY, LIMIT_OPTIONS: LIMIT_OPTIONS,
     showDetails: showDetails, showMain: showMain, swipeDirection: swipeDirection,
     keyTarget: keyTarget, limitRowLabel: limitRowLabel,
+    setSelectedSide: setSelectedSide, getSelectedSide: getSelectedSide, toggleParked: toggleParked,
     currentView: function () { return view; }, renderAll: renderAll, renderSideCards: renderSideCards };
 }
 </script>
