@@ -1719,7 +1719,8 @@ function liveSideCardsHtml() {
     return '<div class="card"><div class="label">Live lookup \u2014 ' + liveEsc(LIVE.streetName || "") +
       '</div><div style="font-size:20px;font-weight:700;margin-top:4px">Reading the city\u2019s signs\u2026</div></div>';
   }
-  return '<div class="card"><div class="label">Live lookup \u2014 ' + liveEsc(LIVE.streetName || "") +
+  var label = LIVE.streetName ? "Live lookup \u2014 " + liveEsc(LIVE.streetName) : "Live city-data lookup";
+  return '<div class="card"><div class="label">' + label +
     '</div><div style="font-size:20px;font-weight:700;margin-top:4px">' + liveEsc(LIVE.errorTitle || "Live city-data lookup") +
     '</div><div class="note">' + liveEsc(LIVE.errorDetail || "No windows can be shown.") + '</div></div>';
 }
@@ -1749,9 +1750,14 @@ function liveRenderChrome() {
   }
   if (lb) {
     lb.classList.remove("hidden");
-    lb.textContent = LIVE.status === "loading"
-      ? "Live lookup \u2014 " + (LIVE.streetName || "") + ". Reading the city\u2019s signs\u2026"
-      : "Live lookup \u2014 " + (LIVE.streetName || "") + ". City data, not a verified page.";
+    if (LIVE.status === "loading") {
+      lb.textContent = "Live lookup \u2014 " + (LIVE.streetName || "") + ". Reading the city\u2019s signs\u2026";
+    } else if (LIVE.streetName) {
+      lb.textContent = "Live lookup \u2014 " + LIVE.streetName + ". City data, not a verified page.";
+    } else {
+      /* No street name yet (e.g. a highway fix on a fresh load): say what happened, never print a blank name. */
+      lb.textContent = (LIVE.errorTitle || "Live city-data lookup") + ".";
+    }
   }
   var vb = el("verifyBanner");
   if (vb) vb.innerHTML = liveVerifyBannerHtml();
