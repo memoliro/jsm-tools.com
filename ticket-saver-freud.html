@@ -549,18 +549,24 @@ function renderSideCards() {
     var s = DATA.sides[key];
     html += '<div class="card"><div class="label">' + esc(s.label) + '</div>';
     if (s.status === "established") {
-      var w = s.windows[0];
-      html += '<div style="font-size:21px;font-weight:700;margin-top:4px">' + esc(windowHeadline(w)) + '</div>';
-      html += '<div class="sign">Sign says: <span class="fr">' + esc(w.verbatim) + '</span><br>'
-        + '<span class="note">' + w.signs.length + ' pole(s) on this side carry this sign ('
-        + w.signs.map(function (g) { return Math.round(Math.abs(g.along_track_from_home_block_m)) + " m " +
-            (g.along_track_from_home_block_m < 0 ? DATA.street.along_negative_label : DATA.street.along_positive_label)
-            + " of " + DATA.street.address_number; }).join("; ")
-        + ').</span></div>';
-      if (w.exception) {
-        html += '<div class="warnline">Except resident-permit holders (' + esc(w.exception) + '). '
-          + 'This is the conservative reading — it applies to you unless you hold a resident permit for this street.</div>';
-      }
+      s.windows.forEach(function (w) {
+        html += '<div style="font-size:21px;font-weight:700;margin-top:4px">' + esc(windowHeadline(w)) + '</div>';
+        if (w.source === "photo") {
+          html += '<div class="sign">Sign says: <span class="fr">' + esc(w.verbatim) + '</span><br>'
+            + '<span class="note">' + esc(w.photo_note || "") + '</span></div>';
+        } else {
+          html += '<div class="sign">Sign says: <span class="fr">' + esc(w.verbatim) + '</span><br>'
+            + '<span class="note">' + w.signs.length + ' pole(s) on this side carry this sign ('
+            + w.signs.map(function (g) { return Math.round(Math.abs(g.along_track_from_home_block_m)) + " m " +
+                (g.along_track_from_home_block_m < 0 ? DATA.street.along_negative_label : DATA.street.along_positive_label)
+                + " of " + DATA.street.address_number; }).join("; ")
+            + ').</span></div>';
+          if (w.exception) {
+            html += '<div class="warnline">Except resident-permit holders (' + esc(w.exception) + '). '
+              + 'This is the conservative reading — it applies to you unless you hold a resident permit for this street.</div>';
+          }
+        }
+      });
     } else if (s.status === "conflict") {
       html += '<div style="font-size:20px;font-weight:700;margin-top:4px">Two different windows found — unresolved</div>'
         + '<div class="note">The app does not pick one.</div>';
@@ -618,6 +624,22 @@ function toggleParked(nowMs) {
   else setSelectedSide(PARKED_DEFAULT_SIDE, nowMs);
 }
 
+/* A side can carry more than one genuine window (Lacombe even: Tue 10-11 from
+   the data + Tue 12-14 from a photo). The hero counts down to the nearest one;
+   a window that is live right now wins over a later one. */
+function nextWindowForSide(key, now) {
+  var s = DATA.sides[key];
+  if (!s || s.status !== "established" || !s.windows || !s.windows.length) return null;
+  var best = null;
+  for (var i = 0; i < s.windows.length; i++) {
+    var nw = nextWindow(s.windows[i], now);
+    if (!nw) continue;
+    if (nw.state === "now") return { win: s.windows[i], nw: nw };
+    if (!best || nw.start.getTime() < best.nw.start.getTime()) best = { win: s.windows[i], nw: nw };
+  }
+  return best;
+}
+
 /* Pure hero decision (exposed for tests): what the hero shows for a side at a time.
    Returns { mode, title, count, detail, showIcs, exception }.
    mode: 'prompt' (no side) | 'no_window' | 'now' | 'next' | 'season_over' | 'error' */
@@ -629,10 +651,10 @@ function heroState(key, now) {
              title: "No verified window",
              detail: "No verified window — check the physical sign." };
   }
-  var w = s.windows[0];
-  var nw = nextWindow(w, now);
-  if (!nw) return { mode: "error", showIcs: false, title: "No window found",
-                    detail: "Could not compute a next window from the data." };
+  var r = nextWindowForSide(key, now);
+  if (!r) return { mode: "error", showIcs: false, title: "No window found",
+                   detail: "Could not compute a next window from the data." };
+  var w = r.win, nw = r.nw;
   if (nw.state === "now") {
     return { mode: "now", showIcs: true, title: "Cleaning now — move the car",
              count: "ends " + fmtTimeToronto(nw.end),
