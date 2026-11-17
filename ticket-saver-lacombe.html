@@ -525,9 +525,11 @@ function clearLimitTimer() {
 }
 /* One-off .ics: a single event, parked-at -> parked-at + limit, with one VALARM
    before expiry. No RRULE — this is a one-time timer, not the recurring cleaning export. */
-function buildLimitIcs(parkedAtMs, limitMin, nowMs) {
+function buildLimitIcs(parkedAtMs, limitMin, nowMs, endMs) {
   var start = new Date(parkedAtMs);
-  var end = new Date(parkedAtMs + limitMin * 60000);
+  var rawEndMs = parkedAtMs + limitMin * 60000;
+  var end = new Date((typeof endMs === "number") ? endMs : rawEndMs);
+  var capped = (typeof endMs === "number") && endMs < rawEndMs;
   var lead = alarmLeadMin(limitMin);
   var stamp = new Date(nowMs).toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
   var uid = "ticket-saver-limit-" + limitMin + "-" + icsDateLocal(start) + "@jsm-tools.com";
@@ -539,10 +541,14 @@ function buildLimitIcs(parkedAtMs, limitMin, nowMs) {
     "DTSTART;TZID=America/Toronto:" + icsDateLocal(start),
     "DTEND;TZID=America/Toronto:" + icsDateLocal(end),
     "SUMMARY:Ticket Saver — parking limit ends (" + LIMIT_LABELS[limitMin] + "), " + DATA.street.short_name,
-    "DESCRIPTION:" + icsEscape("Parking limit of " + LIMIT_LABELS[limitMin] + " on " + DATA.street.name + " ends at "
-      + fmtTimeToronto(end) + ". Move the car before then. One-time event from the Ticket Saver parking limit timer."),
+    "DESCRIPTION:" + icsEscape(capped
+      ? "The posted parking hours on " + DATA.street.name + " end at " + fmtTimeToronto(end) + ". After that, no time limit applies. One-time event from the Ticket Saver parking limit timer."
+      : "Parking limit of " + LIMIT_LABELS[limitMin] + " on " + DATA.street.name + " ends at "
+        + fmtTimeToronto(end) + ". Move the car before then. One-time event from the Ticket Saver parking limit timer."),
     "BEGIN:VALARM", "TRIGGER:-PT" + lead + "M", "ACTION:DISPLAY",
-    "DESCRIPTION:" + icsEscape("Move the car — your " + LIMIT_LABELS[limitMin] + " parking limit on " + DATA.street.short_name + " ends in " + lead + " minutes."),
+    "DESCRIPTION:" + icsEscape(capped
+      ? "The posted parking hours on " + DATA.street.short_name + " end in " + lead + " minutes — after that, no time limit applies."
+      : "Move the car — your " + LIMIT_LABELS[limitMin] + " parking limit on " + DATA.street.short_name + " ends in " + lead + " minutes."),
     "END:VALARM",
     "END:VEVENT", "END:VCALENDAR"
   ]);
@@ -730,6 +736,30 @@ function limitAdjective(minutes) {
 function limitExpiryMs(lim, parkedAtMs) {
   return anchorLimitStartFor(lim, parkedAtMs) + lim.minutes * 60000;
 }
+/* The posted hours end the limit (Phase 2 screenshot fix, Nov 17): the sign
+   reads "P 2h 9h-18h" — the 2-hour maximum runs only inside 09:00-18:00.
+   A car parked at 17:07 has its 2 hours run out of hours at 18:00, not at
+   19:07: after the close no limit binds, so the stay has no "move by"
+   deadline from the limit at all (the next binding rule is the cleaning
+   window). limitCloseMs is the close of the posted window on the anchor's
+   day; limitDeadlineMs is the limit's move-by deadline, or null when the
+   stay outruns the window. A stay anchored to a LATER window (overnight /
+   weekend park) is unaffected: its anchor is that window's open, so its
+   expiry falls inside the window and the deadline stands. */
+function limitCloseMs(lim, parkedAtMs) {
+  if (!lim || !lim.end) return null;
+  var anchor = anchorLimitStartFor(lim, parkedAtMs);
+  var en = parseHM(lim.end);
+  var p = tzParts(new Date(anchor));
+  return torontoToUtc(p.y, p.mo, p.d, en.h, en.mi).getTime();
+}
+function limitDeadlineMs(lim, parkedAtMs) {
+  if (!lim || typeof lim.minutes !== "number") return null;
+  var expiry = limitExpiryMs(lim, parkedAtMs);
+  var close = limitCloseMs(lim, parkedAtMs);
+  if (close === null) return expiry;
+  return expiry <= close ? expiry : null;
+}
 function fmtDayTime(ms) {
   var p = tzParts(new Date(ms));
   return DAY_SHORT[p.wd] + " " + fmtTimeToronto(new Date(ms));
@@ -751,7 +781,7 @@ function bindingDeadlineForSideData(side, lim, evalMs, parkedAtMs) {
     if (r.nw.state === "now") cleanDl = r.nw.end.getTime();
     else if (r.nw.state === "next") cleanDl = r.nw.start.getTime();
   }
-  var limDl = lim ? limitExpiryMs(lim, parked) : null;
+  var limDl = lim ? limitDeadlineMs(lim, parked) : null;
   if (cleanDl === null && limDl === null) return null;
   if (limDl === null || (cleanDl !== null && cleanDl <= limDl)) return { deadlineMs: cleanDl, binds: "cleaning" };
   return { deadlineMs: limDl, binds: "limit" };
@@ -772,7 +802,7 @@ function verdictForSideData(side, lim, evalMs, parkedAtMs, isFuture) {
              deadlineMs: binding ? binding.deadlineMs : r.nw.end.getTime(),
              binds: binding ? binding.binds : "cleaning" };
   }
-  var limitExpiry = lim ? limitExpiryMs(lim, parked) : null;
+  var limitExpiry = lim ? limitDeadlineMs(lim, parked) : null;
   if (limitExpiry !== null && limitExpiry <= evalMs) {
     return { kind: "limit_expired",
              text: moveNow + "your " + limitAdjective(lim.minutes) + " limit ended at "
@@ -928,8 +958,17 @@ function renderHero() {
 /* The limit card stays one row even while a timer runs: the row label carries
    the countdown ("42 min left · ends 6:10 PM"); tiles + big countdown + Clear
    live behind the tap. Pure, so tests can drive it. */
-function limitRowLabel(t, nowMs) {
+function limitRowLabel(t, nowMs, lim) {
   if (!t) return "Parking limit timer";
+  if (lim === undefined) lim = limitForSide();
+  if (lim) {
+    var dl = limitDeadlineMs(lim, t.parkedAt);
+    if (dl === null) {
+      var close = limitCloseMs(lim, t.parkedAt);
+      if (close !== null && nowMs >= close) return "No limit now";
+      if (close !== null) return fmtCountdown(close - nowMs) + " left · ends " + fmtTimeToronto(new Date(close));
+    }
+  }
   var st = limitState(t.parkedAt, t.limitMin, nowMs);
   if (st.state === "expired") return "Limit reached";
   if (st.state === "waiting") return "Starts " + fmtTimeToronto(new Date(t.parkedAt)) + " · ends " + fmtTimeToronto(st.end);
@@ -956,9 +995,27 @@ function renderLimit() {
   var running = el("limitRunning");
   if (!t) { running.classList.add("hidden"); return; }
   running.classList.remove("hidden");
+  var lim = limitForSide();
+  var dl = lim ? limitDeadlineMs(lim, t.parkedAt) : null;
+  var close = lim ? limitCloseMs(lim, t.parkedAt) : null;
+  var warn = el("limitWarn");
+  if (lim && dl === null && close !== null) {
+    /* The stay outruns the posted hours: the limit ends at the window
+       close, and after the close no limit binds — so this is the limit
+       ending, not a "move the car" moment. */
+    if (Date.now() >= close) {
+      el("limitCount").textContent = "No limit now";
+      el("limitDetail").textContent = "The posted hours ended at " + fmtTimeToronto(new Date(close)) + ".";
+      warn.classList.add("hidden");
+    } else {
+      el("limitCount").textContent = fmtCountdown(close - Date.now()) + " left";
+      el("limitDetail").textContent = "Ends " + fmtTimeToronto(new Date(close)) + ".";
+      warn.classList.add("hidden");
+    }
+    return;
+  }
   var st = limitState(t.parkedAt, t.limitMin, Date.now());
   el("limitDetail").textContent = "Ends " + fmtTimeToronto(st.end) + ".";
-  var warn = el("limitWarn");
   if (st.state === "expired") {
     el("limitCount").textContent = "Limit reached";
     warn.classList.remove("hidden");
@@ -1190,7 +1247,13 @@ function checkGps() {
 function exportLimitIcs() {
   var t = getLimitTimer();
   if (!t) return;
-  var ics = buildLimitIcs(t.parkedAt, t.limitMin, Date.now());
+  var lim = limitForSide();
+  var end = null;
+  if (lim) {
+    var dl = limitDeadlineMs(lim, t.parkedAt);
+    end = (dl !== null) ? dl : limitCloseMs(lim, t.parkedAt);
+  }
+  var ics = buildLimitIcs(t.parkedAt, t.limitMin, Date.now(), end);
   if (!ics) return;
   var blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
   var a = document.createElement("a");
@@ -2320,7 +2383,8 @@ if (typeof window !== "undefined") {
     bindingDeadlineForSide: bindingDeadlineForSide, bindingDeadlineForSideData: bindingDeadlineForSideData,
     heroWarningState: heroWarningState, heroWarningStateForData: heroWarningStateForData,
     limitForSideKey: limitForSideKey, anchorLimitStartFor: anchorLimitStartFor,
-    limitExpiryMs: limitExpiryMs, parkedAtForVerdict: parkedAtForVerdict,
+    limitExpiryMs: limitExpiryMs, limitDeadlineMs: limitDeadlineMs, limitCloseMs: limitCloseMs,
+    parkedAtForVerdict: parkedAtForVerdict,
     renderPlanAhead: renderPlanAhead, planResultText: planResultText,
     planChosenMs: planChosenMs, setPlanOpen: setPlanOpen,
     nextWindowForSideData: nextWindowForSideData,
