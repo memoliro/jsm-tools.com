@@ -574,14 +574,18 @@ function renderSideCards() {
         + '<div class="note">The app does not pick one.</div>';
       s.conflicting_windows.forEach(function (w) {
         html += '<div class="sign">Sign says: <span class="fr">' + esc(w.verbatim) + '</span><br>'
-          + '<span class="note">' + w.pole_count + ' pole(s)</span></div>';
+          + '<span class="note">' + w.pole_count + ' pole(s)</span>'
+          + (w.photo_url ? '<br><a href="' + esc(w.photo_url) + '" target="_blank" rel="noopener">See the sign photo</a>' : '')
+          + '</div>';
       });
     } else if (s.status === "ambiguous") {
       html += '<div style="font-size:20px;font-weight:700;margin-top:4px">Couldn&rsquo;t verify a window for this side</div>'
         + '<div class="note">' + esc(s.reason) + '</div>';
       s.ambiguous_signs.forEach(function (a) {
         html += '<div class="sign">Sign says: <span class="fr">' + esc(a.verbatim) + '</span><br>'
-          + '<span class="note">Couldn&rsquo;t parse this sign reliably.</span></div>';
+          + '<span class="note">Couldn&rsquo;t parse this sign reliably.</span>'
+          + (a.photo_url ? '<br><a href="' + esc(a.photo_url) + '" target="_blank" rel="noopener">See the sign photo</a>' : '')
+          + '</div>';
       });
     } else {
       html += '<div style="font-size:20px;font-weight:700;margin-top:4px">Not established for this side yet — the data doesn&rsquo;t say</div>'
