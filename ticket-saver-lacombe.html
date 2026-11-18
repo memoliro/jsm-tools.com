@@ -18,6 +18,9 @@
     --amber-line: #ecd9ac;
     --now-bg: #fdeeda;
     --now-ink: #8a3d00;
+    /* Phase 4 fix: the fine line's soft warning red (muted brick, not an
+       error red) — the only red in the palette. */
+    --fine-ink: #a63a2e;
     --soft-green: #e7f6ee;
   }
   body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
@@ -53,12 +56,28 @@
   #heroCard.warn15 .count, #heroCard.warn15 .big { color: var(--now-ink); }
   /* Phase 2 verdict: one plain bold line, body size, same as the rest. */
   #heroVerdict { font-size: 18px; font-weight: 700; margin-top: 8px; }
-  /* Phase 4: the fine line under a verdict (own line, muted, so the verdict
-     text itself stays byte-identical) and the paid-parking line. */
-  #heroFine { font-size: 15px; color: var(--muted); margin-top: 6px; }
-  #heroPaid { font-size: 16px; margin-top: 6px; }
-  .fine { font-size: 15px; color: var(--muted); margin-top: 4px; }
-  .paidline { font-size: 17px; margin-top: 10px; }
+  /* Phase 4: the fine line under a verdict (own line, so the verdict text
+     itself stays byte-identical). Presentation fix (Nov 17, his call): the
+     fine is the stakes of the move warning, not permanent info — 13px soft
+     warning red, shown only while a warn30/warn15 move warning fires.
+     The 13px is the ONE sanctioned exception to the 15px text floor (his
+     explicit call); the floor stands for every other line on the page. */
+  #heroFine { font-size: 13px; color: var(--fine-ink); margin-top: 6px; }
+  .fine { font-size: 13px; color: var(--fine-ink); margin-top: 4px; }
+  /* Phase 4 fix: the paid-zone warning row + strip map. The row is a
+     limitrow-shaped toggle (same chevron); the strip is a small SVG of the
+     block (centreline + verified metered spots + your address), drawn from
+     the paid block's real along-track positions — never guessed. */
+  .warnrow { display: flex; justify-content: space-between; align-items: center; gap: 10px;
+             width: 100%; background: none; border: 0; padding: 0; font-size: 18px; font-weight: 700;
+             color: var(--ink); cursor: pointer; font-family: inherit; }
+  .warnrow #paidWarnText { flex: 1; text-align: center; }
+  .warnrow .chev { color: var(--muted); font-size: 20px; display: inline-block; }
+  .warnrow.open .chev { transform: rotate(90deg); }
+  .warnrow:hover .chev, .warnrow:focus-visible .chev { color: var(--accent); }
+  .warnrow:focus-visible { outline: none; }
+  .paidstrip { margin-top: 10px; }
+  .paidstrip svg { display: block; width: 100%; height: auto; }
   .verdict { font-size: 18px; font-weight: 700; margin-top: 4px; }
   .planinputs { display: flex; gap: 10px; margin-top: 10px; }
   .planinputs input { flex: 1 1 0; min-width: 0; font-family: inherit; font-size: 18px;
@@ -155,10 +174,17 @@
     <div id="heroDetail" style="font-size:17px"></div>
     <div id="heroVerdict" class="hidden"></div>
     <div id="heroFine" class="hidden"></div>
-    <div id="heroPaid" class="hidden"></div>
     <div style="margin-top:10px;text-align:center">
       <button class="action primary" id="parkedToggle">Parked</button>
     </div>
+  </div>
+
+  <!-- Phase 4 fix (Nov 17): the paid-zone warning — one compact row that
+       expands to the strip map. Paid sides only; free/unknown sides never
+       show this card (see renderPaidWarn). -->
+  <div class="card hidden" id="paidWarnCard">
+    <button class="warnrow" id="paidWarnToggle" aria-expanded="false"><span id="paidWarnText"></span><span class="chev" aria-hidden="true">&rsaquo;</span></button>
+    <div id="paidWarnBody" class="hidden"></div>
   </div>
 
   <div class="card" id="pickCard">
@@ -613,7 +639,11 @@ function renderSideCards() {
     html += '<div class="card"><div class="label">' + esc(s.label) + '</div>';
     var v = verdictForSide(key, Date.now(), parkedAtForVerdict(key));
     if (v) html += '<div class="verdict">' + esc(v.text) + '</div>';
-    if (v && v.fine) html += '<div class="fine">' + esc(v.fine) + '</div>';
+    /* Same warning gating as the hero, per side: each side's fine shows
+       only while THAT side's move warning fires (Phase 4 fix, Nov 17) — or
+       when the verdict is a whole-side no-stopping one, which IS the warning. */
+    var w = heroWarningState(key, Date.now(), parkedAtForVerdict(key));
+    if (v && v.fine && (w.level !== "none" || v.kind === "no_stop")) html += '<div class="fine">' + esc(v.fine) + '</div>';
     if (s.status === "established") {
       s.windows.forEach(function (w) {
         html += '<div style="font-size:21px;font-weight:700;margin-top:4px">' + esc(windowHeadline(w)) + '</div>';
@@ -666,9 +696,11 @@ function renderSideCards() {
           + '</div>';
       });
     }
-    /* Paid parking is independent of the cleaning status: a side with no
-       verified window can still be paid, free, or outside the dataset. */
-    html += paidDetailHtml(s);
+    /* Paid parking is independent of the cleaning status — but the paid
+       block no longer lives in Details text (Phase 4 fix, Nov 17): paid
+       sides get the warning row + strip map on the main view instead.
+       Only the "not established" line stays here, on unknown sides. */
+    html += paidUnknownHtml(s);
     if (s.permanent_ban_note) {
       html += '<div class="warnline">' + esc(s.permanent_ban_note) + '</div>';
       if (s.permanent_ban_signs && s.permanent_ban_signs.length) {
@@ -1012,29 +1044,77 @@ function paidRateText(p) {
     return fmtDollars(p.rate_min_cents) + "–" + fmtDollars(p.rate_max_cents) + "/h";
   return "rate not stated in the data";
 }
-function paidLineFor(side) {
-  /* One-line hero note: only when the picked side is paid. Free/unknown
-     say nothing on the hero (Details states them). */
+/* Phase 4 fix (Nov 17, his call): the hero stacked verdict + fine + paid
+   rate — too much to read at a glance. The paid line leaves the hero and
+   the paid block leaves Details text; in their place ONE compact paid-zone
+   warning (a row + an expandable strip map) sits between the hero and the
+   side buttons, on paid sides only. The fine stays under the verdict but
+   only while a move warning fires (warn30/warn15) — it is the stakes of
+   the warning, not permanent info. Exception: a whole-side no-stopping
+   verdict IS itself the warning, so its art. 4 fine shows whenever that
+   verdict shows, even though a no-stop side has no deadline to count a
+   warning from. Plan-ahead keeps its fine: it is a
+   "what if" view, not a live warning, so the fine there is reference info
+   (see planResultText). Free sides show nothing; unknown sides still say
+   "not established" — silence would violate the honest-data rule. */
+function paidUnknownHtml(side) {
+  var p = side && side.paid;
+  if (!p || p.status !== "unknown") return "";
+  return '<div class="note">Paid parking not established here — '
+    + esc(p.reason || "the city's paid-parking data doesn't cover this street.")
+    + '</div>';
+}
+function paidWarnRowText(side) {
   var p = side && side.paid;
   if (!p || p.status !== "paid") return "";
-  return "Paid parking — " + paidRateText(p)
-    + ((typeof p.max_hours === "number") ? ", max " + p.max_hours + " h" : "") + ".";
+  var n = p.places;
+  return "Paid zone — " + (typeof n === "number" ? n + " metered spot" + (n === 1 ? "" : "s") + ", " : "") + paidRateText(p);
 }
-function paidDetailHtml(side) {
+/* The strip map: the block as one line, home at 0, the verified metered
+   spots as dots at their real along-track metres (build_paid.py /
+   livePaidBuildSide), the cross streets at the ends. Positions only — no
+   invented spots, no guessed rates. Returns "" when the paid block carries
+   no positions (old cache, or a lookup that did not compute them). */
+function paidStripHtml(p, homeLabel) {
+  if (!p || p.status !== "paid") return "";
+  var pos = p.places_along_m, seg = p.seg_m;
+  if (!pos || !pos.length || !seg || seg.length !== 2 || !(seg[1] > seg[0])) return "";
+  var W = 300, H = 84, PAD = 14, Y = 30;
+  function x(m) { return PAD + (m - seg[0]) / (seg[1] - seg[0]) * (W - 2 * PAD); }
+  var hx = x(0);
+  if (hx < PAD) hx = PAD;
+  if (hx > W - PAD) hx = W - PAD;
+  var s = '<div class="paidstrip"><svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Metered spots along the block">';
+  var ends = p.seg_ends || [];
+  if (ends[0]) s += '<text x="' + PAD + '" y="12" font-size="11" style="fill:var(--muted)" text-anchor="start">' + esc(ends[0]) + '</text>';
+  if (ends[1]) s += '<text x="' + (W - PAD) + '" y="12" font-size="11" style="fill:var(--muted)" text-anchor="end">' + esc(ends[1]) + '</text>';
+  s += '<line x1="' + PAD + '" y1="' + Y + '" x2="' + (W - PAD) + '" y2="' + Y + '" style="stroke:var(--line)" stroke-width="3" stroke-linecap="round"/>';
+  s += '<line x1="' + hx.toFixed(1) + '" y1="' + (Y - 8) + '" x2="' + hx.toFixed(1) + '" y2="' + (Y + 8) + '" style="stroke:var(--ink)" stroke-width="2"/>';
+  if (homeLabel) s += '<text x="' + hx.toFixed(1) + '" y="52" font-size="12" font-weight="bold" style="fill:var(--ink)" text-anchor="middle">' + esc(homeLabel) + '</text>';
+  pos.forEach(function (m) {
+    var px = x(m);
+    if (px < PAD) px = PAD;
+    if (px > W - PAD) px = W - PAD;
+    s += '<circle cx="' + px.toFixed(1) + '" cy="' + Y + '" r="5" fill="#d97706" stroke="#fff" stroke-width="1.5"/>';
+  });
+  s += '</svg><div class="note">Dots are the metered spots, placed along the block from your address.</div></div>';
+  return s;
+}
+/* The warning body: the strip (when positions exist) + the max stay /
+   priced hours / provenance — the same facts the old Details block stated,
+   minus the "Paid parking —" headline (the row already says it). homeLabel
+   defaults to the baked street's address number; renderPaidWarn passes the
+   live house number in live mode. */
+function paidWarnBodyHtml(side, homeLabel) {
   var p = side && side.paid;
-  if (!p || !p.status) return "";
-  if (p.status === "free") {
-    return '<div class="paidline">Free parking on this side — no paid places in the city\'s paid-parking data for this stretch.'
-      + (p.as_of ? ' <span class="note">(Paid-parking data: ' + esc(fmtAsOfDate(p.as_of)) + '.)</span>' : '') + '</div>';
+  if (!p || p.status !== "paid") return "";
+  if (homeLabel === undefined) {
+    homeLabel = (typeof DATA !== "undefined" && DATA && DATA.street && DATA.street.address_number)
+      ? String(DATA.street.address_number) : null;
   }
-  if (p.status === "unknown") {
-    return '<div class="paidline">Paid parking not established here — '
-      + esc(p.reason || "the city's paid-parking data doesn't cover this street.") + '</div>';
-  }
-  if (p.status !== "paid") return "";
-  var h = '<div class="paidline">Paid parking — <b>' + esc(paidRateText(p)) + '</b>'
-    + ((typeof p.max_hours === "number") ? ' · Max stay <b>' + p.max_hours + ' h</b>' : '')
-    + '</div>';
+  var s = paidStripHtml(p, homeLabel);
+  var h = "";
+  if (typeof p.max_hours === "number") h += '<div class="note">Max stay ' + p.max_hours + ' h.</div>';
   var hours = p.hours_raw ? (translatePeriodText(p.hours_raw) || p.hours_raw) : null;
   if (hours) h += '<div class="note">Priced hours: ' + esc(hours) + '.</div>';
   if (p.max_hours_alt && typeof p.max_hours_alt.hours === "number" && p.max_hours_alt.raw && p.max_hours_alt.raw.length) {
@@ -1044,7 +1124,41 @@ function paidDetailHtml(side) {
   h += '<div class="note">' + (p.places ? p.places + ' metered place(s) on this side. ' : '')
     + 'Rates from the Agence de mobilité durable'
     + (p.as_of ? ' (' + esc(fmtAsOfDate(p.as_of)) + ')' : '') + '.</div>';
-  return h;
+  return s + h;
+}
+function setPaidWarnOpen(open) {
+  var b = el("paidWarnBody");
+  if (b) b.classList.toggle("hidden", !open);
+  var t = el("paidWarnToggle");
+  if (t) {
+    t.classList.toggle("open", !!open);
+    if (t.setAttribute) t.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+}
+var _paidWarnSig = "";
+/* The warning card: paid sides only, driven by the picked side. The body
+   re-renders only when the row / positions / home label change (sig guard),
+   so the 30 s hero tick and the expand/collapse toggle never wipe it. */
+function renderPaidWarn() {
+  var card = el("paidWarnCard");
+  if (!card) return;
+  var key = getSelectedSide();
+  var side = key ? liveActiveSides()[key] : null;
+  var p = side && side.paid;
+  if (!p || p.status !== "paid") { card.classList.add("hidden"); _paidWarnSig = ""; return; }
+  var row = paidWarnRowText(side);
+  var home = null;
+  if (typeof LIVE !== "undefined" && LIVE && LIVE.houseNumber) home = String(LIVE.houseNumber);
+  else if (typeof DATA !== "undefined" && DATA && DATA.street && DATA.street.address_number) home = String(DATA.street.address_number);
+  var sig = key + "|" + row + "|" + (p.places_along_m ? p.places_along_m.join(",") : "") + "|" + (home || "");
+  var txt = el("paidWarnText");
+  if (txt) txt.textContent = row;
+  if (sig !== _paidWarnSig) {
+    var body = el("paidWarnBody");
+    if (body) body.innerHTML = paidWarnBodyHtml(side, home);
+    _paidWarnSig = sig;
+  }
+  card.classList.remove("hidden");
 }
 function verdictForSideData(side, lim, evalMs, parkedAtMs, isFuture) {
   if (!side || side.status !== "established" || !side.windows || !side.windows.length) return null;
@@ -1189,6 +1303,7 @@ function renderHero() {
   var hero = el("heroCard"), banner = el("parkedBanner");
   liveMarkSideButtons(key);
   var tg = el("parkedToggle");
+  renderPaidWarn();
   if (!key) {
     banner.classList.add("hidden");
     /* Prompt mode: not parked yet — the hero is the one-tap "Parked" button. */
@@ -1201,8 +1316,6 @@ function renderHero() {
     if (hv0) { hv0.textContent = ""; hv0.classList.add("hidden"); }
     var hf0 = el("heroFine");
     if (hf0) { hf0.textContent = ""; hf0.classList.add("hidden"); }
-    var hp0 = el("heroPaid");
-    if (hp0) { hp0.textContent = ""; hp0.classList.add("hidden"); }
     el("heroTitle").textContent = "Not parked";
     var hc0 = el("heroCount");
     hc0.textContent = "";
@@ -1238,16 +1351,15 @@ function renderHero() {
     hv.textContent = v ? v.text : "";
     hv.classList.toggle("hidden", !v);
   }
+  /* The fine is the stakes of the move warning, not permanent info: it
+     shows only while a warn30/warn15 warning fires (Phase 4 fix, Nov 17).
+     A whole-side no-stopping verdict IS itself the warning — "Cannot park
+     here at all" — so its art. 4 fine shows whenever that verdict shows, even
+     though a no-stop side has no deadline to count a warning from. */
   var hf = el("heroFine");
   if (hf) {
     hf.textContent = v ? (v.fine || "") : "";
-    hf.classList.toggle("hidden", !v || !v.fine);
-  }
-  var hp = el("heroPaid");
-  if (hp) {
-    var pl = paidLineFor(liveActiveSides()[key]);
-    hp.textContent = pl;
-    hp.classList.toggle("hidden", !pl);
+    hf.classList.toggle("hidden", !v || !v.fine || (warn.level === "none" && v.kind !== "no_stop"));
   }
   tg.textContent = "Not Parked";
 }
@@ -1341,7 +1453,10 @@ function planResultText(nowMs) {
   var when = fmtDateShortToronto(new Date(chosen)) + ", " + fmtTimeToronto(new Date(chosen));
   if (!v) return when + " — No verified window for this side — the data doesn't say.";
   /* Plan-ahead is the same verdict at a future time, so it carries the
-     same fine — deliberately: the cost of overstaying is part of the plan. */
+     same fine — deliberately: the cost of overstaying is part of the plan.
+     Presentation fix (Nov 17): the fine stays visible here — plan-ahead is
+     a "what if" view, not a live warning, so the fine is reference info;
+     only the hero and Details gate it on a firing warning. */
   return when + " — " + v.text + (v.fine ? " " + v.fine : "");
 }
 function renderPlanAhead(nowMs) {
@@ -1689,6 +1804,9 @@ function init() {
   el("planToggle").addEventListener("click", function () {
     setPlanOpen(el("planBody").classList.contains("hidden"));
   });
+  el("paidWarnToggle").addEventListener("click", function () {
+    setPaidWarnOpen(el("paidWarnBody").classList.contains("hidden"));
+  });
   ["planDate", "planTime"].forEach(function (id) {
     var n = el(id);
     if (n) n.addEventListener("input", function () { renderPlanAhead(); });
@@ -1868,7 +1986,7 @@ var LIVE_BAND_MIN_M = 3, LIVE_BAND_MAX_M = 10;
 var LIVE_PAID_BAND_MIN_M = 1, LIVE_PAID_BAND_MAX_M = 10; /* place centres sit on the road, closer than sign poles */
 var LIVE_INTERSECTION_M = 20, LIVE_CONSENSUS = 2;
 var LIVE_CACHE_TTL_MS = 7 * 86400000;
-var LIVE_CACHE_PREFIX = "ticketSaver.live.v2."; /* v2: the cached result carries the paid block (Phase 4) */
+var LIVE_CACHE_PREFIX = "ticketSaver.live.v3."; /* v3: the cached paid block carries the strip-map positions (Phase 4 presentation fix) */
 var LIVE_RPA_KEY = "ticketSaver.rpa.v1";
 var LIVE_CARRIAGEWAY = ["motorway", "trunk", "primary", "secondary", "tertiary",
   "unclassified", "residential", "living_street"];
@@ -2740,8 +2858,10 @@ function livePaidMatchPlaces(places, result, input) {
    rate is the nearest place's (rates differ along a side only in the
    mixed case, where the range is stated too). The Type-U regulation gives
    the priced hours + max stay; Type-P/Q give the higher evening/weekend
-   max. */
-function livePaidBuildSide(list, empl, regs, regPer, asOf) {
+   max. places_along_m / seg_m / seg_ends are the strip-map positions
+   (same along-track snaps as build_paid.py): the warning row draws the
+   verified spots on the block, never guessed ones. */
+function livePaidBuildSide(list, empl, regs, regPer, asOf, seg) {
   var ids = {};
   list.forEach(function (m) { ids[m.place.sNoPlace] = true; });
   var codes = [];
@@ -2764,7 +2884,10 @@ function livePaidBuildSide(list, empl, regs, regPer, asOf) {
   var nearestRate = parseInt(list[0].place.nTarifHoraire, 10);
   var out = { status: "paid", rate_cents: isNaN(nearestRate) ? null : nearestRate,
     max_hours: null, max_hours_alt: null, hours_raw: null,
-    places: list.length, codes: codes, as_of: asOf, source: LIVE_PAID_SOURCE };
+    places: list.length, codes: codes, as_of: asOf, source: LIVE_PAID_SOURCE,
+    places_along_m: list.map(function (m) { return Math.round(m.along * 10) / 10; }).sort(function (a, b) { return a - b; }),
+    seg_m: seg ? [Math.round(seg.min * 10) / 10, Math.round(seg.max * 10) / 10] : null,
+    seg_ends: seg ? [seg.belowName || null, seg.aboveName || null] : [null, null] };
   if (rates.length && Math.min.apply(null, rates) !== Math.max.apply(null, rates)) {
     out.rate_min_cents = Math.min.apply(null, rates);
     out.rate_max_cents = Math.max.apply(null, rates);
@@ -2804,7 +2927,7 @@ function livePaidBuildSide(list, empl, regs, regPer, asOf) {
    or the box holds paid places on other streets — either proves the dataset
    reaches here) and "unknown" otherwise: a 0-row result outside Montreal
    proves nothing, because the dataset covers Montreal only. */
-function livePaidBuildPaid(matched, empl, regs, regPer, fix, boxHasPlaces, asOf) {
+function livePaidBuildPaid(matched, empl, regs, regPer, fix, boxHasPlaces, asOf, seg) {
   var cityNorm = livePaidCityNorm(fix && fix.city);
   var out = {};
   ["even", "odd"].forEach(function (k) {
@@ -2819,7 +2942,7 @@ function livePaidBuildPaid(matched, empl, regs, regPer, fix, boxHasPlaces, asOf)
       }
       return;
     }
-    out[k] = livePaidBuildSide(list, empl, regs, regPer, asOf);
+    out[k] = livePaidBuildSide(list, empl, regs, regPer, asOf, seg);
   });
   return out;
 }
@@ -2837,7 +2960,7 @@ async function livePaidLookup(fix, result, input, paidAsOf) {
       if (exp && exp.length && exp[0].dDate) asOf = exp[0].dDate;
     } catch (e) { /* keep the package date */ }
     if (!matched.even.length && !matched.odd.length) {
-      return livePaidBuildPaid(matched, [], [], [], fix, places.length > 0, asOf);
+      return livePaidBuildPaid(matched, [], [], [], fix, places.length > 0, asOf, result.segment);
     }
     var ids = [];
     ["even", "odd"].forEach(function (k) {
@@ -2848,7 +2971,7 @@ async function livePaidLookup(fix, result, input, paidAsOf) {
     empl.forEach(function (r) { if (codes.indexOf(r.sCodeAutocollant) < 0) codes.push(r.sCodeAutocollant); });
     var regs = await liveCkanSql(livePaidRegSql(codes));
     var regPer = await liveCkanSql(livePaidRegPerSql(codes));
-    return livePaidBuildPaid(matched, empl, regs, regPer, fix, places.length > 0, asOf);
+    return livePaidBuildPaid(matched, empl, regs, regPer, fix, places.length > 0, asOf, result.segment);
   } catch (e) {
     return unknownBoth;
   }
@@ -3016,8 +3139,10 @@ if (typeof window !== "undefined") {
     migrateLegacySideKey: migrateLegacySideKey, LEGACY_SIDE_KEY: LEGACY_SIDE_KEY,
     verdictForSide: verdictForSide, verdictForSideData: verdictForSideData,
     fineForKind: fineForKind, fmtDollars: fmtDollars, fmtAsOfDate: fmtAsOfDate,
-    translatePeriodText: translatePeriodText, paidLineFor: paidLineFor,
-    paidDetailHtml: paidDetailHtml, FINES: FINES,
+    translatePeriodText: translatePeriodText,
+    paidUnknownHtml: paidUnknownHtml, paidWarnRowText: paidWarnRowText,
+    paidStripHtml: paidStripHtml, paidWarnBodyHtml: paidWarnBodyHtml,
+    renderPaidWarn: renderPaidWarn, setPaidWarnOpen: setPaidWarnOpen, FINES: FINES,
     bindingDeadlineForSide: bindingDeadlineForSide, bindingDeadlineForSideData: bindingDeadlineForSideData,
     heroWarningState: heroWarningState, heroWarningStateForData: heroWarningStateForData,
     limitForSideKey: limitForSideKey, anchorLimitStartFor: anchorLimitStartFor,
