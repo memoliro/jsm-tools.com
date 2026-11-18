@@ -10,7 +10,7 @@
   "method": "Photo walk: two ground-truth photos matched against the joined set (see photo-walk-notes.md).",
   "se_photo": "SE-side pole photographed 2026-11-16 16:26:21 (Nothing Phone (3a), no GPS EXIF): no-parking panel '17h30 - 18h30, LUN ET JEU, 1 AVRIL AU 1 DEC.' (plate code SB-JU; RPA table code SB-JU-A) paired with the 'P 2h 9h-18h LUN A VEN' panel (PV-PB). That cleaning+2h pairing exists in the data only on the four SE cleaning poles (163078 +94.0 m, 75043 +44.2 m, 234006 -42.8 m, 75038 -81.0 m). 'LUN ET JEU' is the abbreviation of 'LUNDI JEUDI' — same rule, not a mismatch. Exact pole unidentified (no GPS); immaterial since all four carry the identical window.",
   "sw_concern_resolved": "The 7h-8h Mon/Thu pole at +174 m along-track (poteau 136123, panneau 1680691, SB-MU-A, '\\P 7h-8h LUNDI JEUDI 1 AVRIL AU 1 DEC', 45.496284, -73.587781) is one of seven identical SB-MU-A poles running on a 231.1-degree line along Chemin de la Côte-des-Neiges (six sit 0.0-1.0 m from Côte-des-Neiges OSM ways, 136123 at 4.8 m; against the carriageway centrelines the row sits 5.6-9.9 m out), not on des Pins Ouest. The '+174 m along-track' and 'SE side' labels are projection artifacts of snapping a cross-street pole onto the des Pins centreline. The SW photo pole (PV-DB 15-min panel + '20 AOÛT AU 30 JUIN' PX-AX plate, no cleaning panel) is a different pole from 136123 (R-RA + SB-MU-A + AD-TT). No second cleaning window stands on the SE side of des Pins. No countdown suppression needed.",
-  "sector_41": "Photo-only finding: the SE pole also carries plates 'EXCEPTÉ VÉHICULES MUNIS D'UN PERMIS, SECTEUR 41' and 'EXCEPTÉ PÉRIODE INTERDITE' under the 2h panel. Interpretation: the sector-41 permit exempts the 2h limit only; 'EXCEPTÉ PÉRIODE INTERDITE' carves the prohibited period back out, so the 17:30-18:30 Mon/Thu cleaning ban binds everyone including permit holders. The dataset records neither plate. No app change: cleaning-only v1 does not display the 2h limit.",
+  "sector_41": "Photo-only finding: the SE pole also carries plates 'EXCEPTÉ VÉHICULES MUNIS D'UN PERMIS, SECTEUR 41' and 'EXCEPTÉ PÉRIODE INTERDITE' under the 2h panel. Interpretation: the sector-41 permit exempts the 2h limit only; 'EXCEPTÉ PÉRIODE INTERDITE' carves the prohibited period back out, so the 17:30-18:30 Mon/Thu cleaning ban binds everyone including permit holders. The dataset records neither plate. Phase 3 (Nov 17): the exception is structured data now (limits.SE.exception = 'SECTEUR 41') — a user who holds a sector 41 resident permit is exempt from the 2-hour limit only; the cleaning ban still binds everyone. The permit a user holds is per-user state, never in this file.",
   "still_owed": "Full photo walk per BASELINE section 2.2 (every pole, both sides) is still owed — only 2 poles photographed. SW photo pole identity unmatched (PX-AX plate type absent from the entire 1,281-row dataset — pipeline gap). Exact SE pole among the four unidentified. FLECHE_PAN arrow ground verification still open. NW side remains not_established."
  },
  "season_reading": "Season dates are INCLUSIVE both ends: a window applies on Apr 1 and on Dec 1 themselves when that date falls on a cleaning weekday. The countdown and the .ics export use this same reading.",
@@ -241,7 +241,8 @@
    "start": "09:00",
    "end": "18:00",
    "poles": 6,
-   "source": "P 02h 09h-18h LUN. AU VEN."
+   "source": "P 02h 09h-18h LUN. AU VEN.",
+   "exception": "SECTEUR 41"
   },
   "NW": {
    "minutes": 15,
@@ -255,7 +256,8 @@
    "start": "07:00",
    "end": "18:00",
    "poles": 9,
-   "source": "P 15 min 07h-18h LUN. AU VEN."
+   "source": "P 15 min 07h-18h LUN. AU VEN.",
+   "exception": null
   }
  },
  "streets": [

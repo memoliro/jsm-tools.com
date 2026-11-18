@@ -168,6 +168,7 @@
       <button class="limittile" data-limit="240">4 h</button>
     </div>
     <div id="limitAnchorNote" style="font-size:15px;color:#9AA0A8;margin-top:8px"></div>
+    <div id="limitExemptNote" class="hidden" style="font-size:17px;margin-top:8px"></div>
     <div id="limitRunning" class="hidden">
       <div class="big" id="limitCount" style="margin-top:12px">—</div>
       <div id="limitDetail" style="font-size:17px"></div>
@@ -224,6 +225,11 @@
     <div style="margin-top:8px">Cleaning only. Winter snow removal is separate — infoneige.ca already covers it.
     No-stopping panels (\A EN TOUT TEMPS) are a stopping ban, not a cleaning window.</div>
     <div id="permitNote" class="hidden" style="margin-top:8px"></div>
+    <div id="permitSetting" class="hidden" style="margin-top:12px">
+      <div class="label">Your resident permit</div>
+      <div id="permitOptions" style="font-size:17px;margin-top:4px"></div>
+      <div style="font-size:15px;color:#9AA0A8;margin-top:4px">Saved on this device only. Verdicts change only for the permits you hold.</div>
+    </div>
   </div>
 
   <div class="card">
@@ -503,12 +509,14 @@ function anchorLimitStart(nowMs) { return anchorLimitStartFor(limitForSide(), no
    day's pre-window period — a mid-day park stays manual (tap a tile =
    "I just parked"). Reads localStorage (picked side + saved timer). */
 function maybeAutoArmLimit(nowMs) {
+  var lim0 = limitForSide();
+  if (lim0 && limitExempted(lim0)) { clearLimitTimer(); return null; } /* the posted limit does not apply to this user — never arm, and a stale timer must not keep counting */
   var saved = getLimitTimer();
   if (saved) {
     if (limitState(saved.parkedAt, saved.limitMin, nowMs).state !== "expired") return null;
     clearLimitTimer(); /* yesterday's timer is done — it must not block tomorrow's arm */
   }
-  var lim = limitForSide(); /* null when no side picked or that side has no verified limit */
+  var lim = lim0; /* null when no side picked or that side has no verified limit */
   if (!lim || !lim.days || !lim.start || !lim.end) return null;
   var p = tzParts(new Date(nowMs));
   if (lim.days.indexOf(p.wd) < 0) return null;
@@ -615,7 +623,9 @@ function renderSideCards() {
                 + " of " + DATA.street.address_number; }).join("; "))
             + ').</span></div>';
           if (w.exception) {
-            html += '<div class="warnline">Except resident-permit holders (' + esc(w.exception) + '). '
+            html += holdsPermitFor(w.exception)
+              ? '<div class="warnline">Your sector ' + sectorOfException(w.exception) + ' permit exempts this window.</div>'
+              : '<div class="warnline">Except resident-permit holders (' + esc(w.exception) + '). '
               + 'This is the conservative reading — it applies to you unless you hold a resident permit for this street.</div>';
           }
         }
@@ -731,6 +741,65 @@ function limitForSideKey(key) {
   if (!lims) return null;
   return lims[key] || null;
 }
+/* ---- resident-permit memory (Phase 3): the vignette the user holds ----
+   The sign's permit exception is street data (DATA.limits.<side>.exception
+   = "SECTEUR N", same string code as a window exception); the permit the
+   user HOLDS is per-user state, saved on this device only under PERMITS_KEY
+   as a JSON array of sector strings. Default: no permit held — with the
+   default, every verdict is byte-identical to before (the exception is
+   stated in the Details permit note, never appended to a verdict that
+   binds). Only a "SECTEUR N" exception can be held: other codes (e.g.
+   "S3R") have no sector to hold, so they stay conservative — stated,
+   never applied. */
+var PERMITS_KEY = "ticketSaver.permits.v1";
+function getHeldPermits() {
+  try {
+    var raw = localStorage.getItem(PERMITS_KEY);
+    if (!raw) return [];
+    var a = JSON.parse(raw);
+    if (!Array.isArray(a)) return [];
+    return a.filter(function (s) { return typeof s === "string" && /^[0-9]+$/.test(s); });
+  } catch (e) { return []; }
+}
+function setHeldPermits(arr) {
+  try { localStorage.setItem(PERMITS_KEY, JSON.stringify(arr)); } catch (e) { /* private mode */ }
+}
+function sectorOfException(code) {
+  var m = /^SECTEUR (\d+)$/.exec(String(code || ""));
+  return m ? m[1] : null;
+}
+function holdsPermitFor(code) {
+  var sector = sectorOfException(code);
+  return sector !== null && getHeldPermits().indexOf(sector) >= 0;
+}
+function limitExempted(lim) { return !!(lim && lim.exception && holdsPermitFor(lim.exception)); }
+function windowExempted(win) { return !!(win && win.exception && holdsPermitFor(win.exception)); }
+function effectiveLimit(lim) { return limitExempted(lim) ? null : lim; }
+function permitLimitStatement(lim) {
+  if (!limitExempted(lim)) return "";
+  return " Your sector " + sectorOfException(lim.exception) + " permit exempts the "
+    + limitAdjective(lim.minutes) + " limit.";
+}
+/* Sectors the user can hold, from the embedded DATA's own exceptions —
+   this street's limits and windows (plus the streets registry, if an
+   entry ever carries one). Never hardcoded: the sector is data, not code. */
+function permitSectors() {
+  var found = [];
+  function add(code) {
+    var s = sectorOfException(code);
+    if (s && found.indexOf(s) < 0) found.push(s);
+  }
+  var lims = (typeof DATA !== "undefined" && DATA) ? DATA.limits : null;
+  if (lims) Object.keys(lims).forEach(function (k) { if (lims[k]) add(lims[k].exception); });
+  var sides = (typeof DATA !== "undefined" && DATA) ? DATA.sides : null;
+  if (sides) Object.keys(sides).forEach(function (k) {
+    var s = sides[k];
+    if (s && s.windows) s.windows.forEach(function (w) { add(w.exception); });
+  });
+  var reg = (typeof DATA !== "undefined" && DATA) ? DATA.streets : null;
+  if (reg) reg.forEach(function (st) { add(st.exception); });
+  return found.sort();
+}
 function limitAdjective(minutes) {
   if (minutes === 15) return "15-minute";
   if (minutes === 60) return "1-hour";
@@ -797,10 +866,11 @@ function permitSuffix(code) {
 function bindingDeadlineForSideData(side, lim, evalMs, parkedAtMs) {
   if (!side || side.status !== "established" || !side.windows || !side.windows.length) return null;
   if (side.no_stopping_whole_side) return null; /* cannot park at all — no deadline to count to */
+  lim = effectiveLimit(lim); /* an exempted limit never binds */
   var parked = (typeof parkedAtMs === "number") ? parkedAtMs : evalMs;
   var r = nextWindowForSideData(side, new Date(evalMs));
   var cleanDl = null;
-  if (r) {
+  if (r && !windowExempted(r.win)) { /* an exempted cleaning window never binds */
     if (r.nw.state === "now") cleanDl = r.nw.end.getTime();
     else if (r.nw.state === "next") cleanDl = r.nw.start.getTime();
   }
@@ -818,34 +888,45 @@ function verdictForSideData(side, lim, evalMs, parkedAtMs, isFuture) {
   var moveNow = isFuture ? "Move then — " : "Move now — ";
   var parked = (typeof parkedAtMs === "number") ? parkedAtMs : evalMs;
   var r = nextWindowForSideData(side, new Date(evalMs));
+  var winEx = !!(r && windowExempted(r.win)); /* the nearest cleaning window does not apply to this user */
+  var limEx = limitExempted(lim); /* the posted limit does not apply to this user */
+  var limEff = limEx ? null : lim;
   var binding = bindingDeadlineForSideData(side, lim, evalMs, parkedAtMs);
-  if (r && r.nw.state === "now") {
+  if (r && r.nw.state === "now" && !winEx) {
     return { kind: "cleaning_now",
              text: moveNow + "cleaning until " + fmtTimeToronto(r.nw.end) + "." + permitSuffix(r.win.exception),
              deadlineMs: binding ? binding.deadlineMs : r.nw.end.getTime(),
              binds: binding ? binding.binds : "cleaning" };
   }
-  var limitExpiry = lim ? limitDeadlineMs(lim, parked) : null;
+  var limitExpiry = limEff ? limitDeadlineMs(limEff, parked) : null;
   if (limitExpiry !== null && limitExpiry <= evalMs) {
     return { kind: "limit_expired",
-             text: moveNow + "your " + limitAdjective(lim.minutes) + " limit ended at "
-               + fmtTimeToronto(new Date(limitExpiry)) + "." + permitSuffix(lim.exception),
+             text: moveNow + "your " + limitAdjective(limEff.minutes) + " limit ended at "
+               + fmtTimeToronto(new Date(limitExpiry)) + ".",
              deadlineMs: limitExpiry, binds: "limit" };
   }
-  var cleanStart = (r && r.nw.state === "next") ? r.nw.start.getTime() : null;
+  var cleanStart = (r && r.nw.state === "next" && !winEx) ? r.nw.start.getTime() : null;
   if (limitExpiry !== null && (cleanStart === null || limitExpiry < cleanStart)) {
     return { kind: "limit",
-             text: "Move by " + fmtDayTime(limitExpiry) + " — " + limitAdjective(lim.minutes)
-               + " limit." + permitSuffix(lim.exception),
+             text: "Move by " + fmtDayTime(limitExpiry) + " — " + limitAdjective(limEff.minutes)
+               + " limit.",
              deadlineMs: limitExpiry, binds: "limit" };
   }
   if (cleanStart !== null) {
     return { kind: "cleaning_soon",
-             text: "You're fine until " + fmtDayTime(cleanStart) + "." + permitSuffix(r.win.exception),
+             text: "You're fine until " + fmtDayTime(cleanStart) + "." + permitSuffix(r.win.exception)
+               + (limEx ? permitLimitStatement(lim) : ""),
              deadlineMs: cleanStart, binds: "cleaning" };
   }
   if (r && r.nw.state === "season_over" && r.win) {
-    return { kind: "season", text: "No cleaning until " + seasonStartLabel(r.win) + ".",
+    return { kind: "season", text: "No cleaning until " + seasonStartLabel(r.win) + "."
+               + (limEx ? permitLimitStatement(lim) : ""),
+             deadlineMs: null, binds: null };
+  }
+  if (winEx) {
+    return { kind: "permit_exempt",
+             text: "You're fine — your sector " + sectorOfException(r.win.exception)
+               + " permit exempts this cleaning window.",
              deadlineMs: null, binds: null };
   }
   return null; /* established side, but no next window could be computed — never guess */
@@ -905,6 +986,11 @@ function heroState(key, now) {
   var r = nextWindowForSide(key, now);
   if (!r) return { mode: "error", showIcs: false, title: "No window found",
                    detail: "Could not compute a next window from the data." };
+  if (windowExempted(r.win)) {
+    return { mode: "next", showIcs: false, title: "Your permit exempts this cleaning",
+             count: "", detail: "The cleaning window does not apply to you.",
+             exception: r.win.exception || null };
+  }
   var w = r.win, nw = r.nw;
   if (nw.state === "now") {
     return { mode: "now", showIcs: true, title: "Cleaning now — move the car",
@@ -983,7 +1069,7 @@ function renderHero() {
    live behind the tap. Pure, so tests can drive it. */
 function limitRowLabel(t, nowMs, lim) {
   if (!t) return "Parking limit timer";
-  if (lim === undefined) lim = limitForSide();
+  if (lim === undefined) lim = effectiveLimit(limitForSide());
   var dl = lim ? limitDeadlineMs(lim, t.parkedAt) : null;
   var st = limitState(t.parkedAt, t.limitMin, nowMs, dl);
   if (st.state === "expired") return "Limit reached";
@@ -999,19 +1085,32 @@ function setLimitOpen(open) {
 
 function renderLimit() {
   var t = getLimitTimer();
+  var limRaw = limitForSide();
+  var limEx = !!(limRaw && limitExempted(limRaw));
+  if (limEx && t) { clearLimitTimer(); t = null; } /* a timer for a limit that no longer applies must not keep counting */
+  var lim = limEx ? null : limRaw;
   var tiles = document.querySelectorAll("#limitTiles .limittile");
   for (var i = 0; i < tiles.length; i++) {
     tiles[i].classList.toggle("selected", !!t && +tiles[i].getAttribute("data-limit") === t.limitMin);
   }
-  el("limitToggleText").textContent = limitRowLabel(t, Date.now());
+  el("limitToggleText").textContent = limEx
+    ? "No limit — sector " + sectorOfException(limRaw.exception) + " permit"
+    : limitRowLabel(t, Date.now(), lim);
   var an = el("limitAnchorNote");
-  if (an) an.textContent = limitForSide()
+  if (an) an.textContent = lim
     ? "If you tap before the posted hours start, the countdown starts when they start — the limit runs from the sign's hours, not from your tap."
     : "";
+  var ex = el("limitExemptNote");
+  if (ex) {
+    ex.classList.toggle("hidden", !limEx);
+    if (limEx) ex.textContent = "Your sector " + sectorOfException(limRaw.exception) + " permit exempts the "
+      + limitAdjective(limRaw.minutes) + " limit — no timer needed.";
+  }
+  var tilesWrap = el("limitTiles");
+  if (tilesWrap) tilesWrap.classList.toggle("hidden", limEx);
   var running = el("limitRunning");
   if (!t) { running.classList.add("hidden"); return; }
   running.classList.remove("hidden");
-  var lim = limitForSide();
   var dl = lim ? limitDeadlineMs(lim, t.parkedAt) : null;
   var st = limitState(t.parkedAt, t.limitMin, Date.now(), dl);
   el("limitDetail").textContent = "Ends " + fmtTimeToronto(st.end) + ".";
@@ -1123,11 +1222,42 @@ function renderAll() {
     if (DATA.street.permit_note_html) { pn.innerHTML = DATA.street.permit_note_html; pn.classList.remove("hidden"); }
     else { pn.innerHTML = ""; pn.classList.add("hidden"); }
   }
+  renderPermitSetting();
   renderSideCards();
   renderHero();
   renderLimit();
   renderPlanAhead();
   liveRenderChrome();
+}
+
+/* The permit setting (Phase 3, Details view): one checkbox per sector the
+   embedded DATA exempts — nothing to hold on streets with no exceptions,
+   so the whole block stays hidden there. The checkboxes are rebuilt from
+   DATA on every renderAll, with their checked state from getHeldPermits(),
+   so the UI can never drift from the saved state. */
+function renderPermitSetting() {
+  var wrap = el("permitSetting");
+  if (!wrap) return;
+  var sectors = permitSectors();
+  wrap.classList.toggle("hidden", sectors.length === 0);
+  var opts = el("permitOptions");
+  if (opts) {
+    var held = getHeldPermits();
+    opts.innerHTML = sectors.map(function (s) {
+      return '<label style="display:block;margin-top:6px"><input type="checkbox" data-permit-sector="' + s + '"'
+        + (held.indexOf(s) >= 0 ? " checked" : "")
+        + ' style="width:20px;height:20px;vertical-align:-4px;margin-right:8px"> I hold a sector ' + s + ' resident permit</label>';
+    }).join("");
+  }
+}
+function onPermitToggle(sector, checked) {
+  var held = getHeldPermits();
+  var i = held.indexOf(sector);
+  if (checked && i < 0) held.push(sector);
+  if (!checked && i >= 0) held.splice(i, 1);
+  setHeldPermits(held);
+  if (checked && getLimitTimer()) clearLimitTimer(); /* a limit that just became exempt must not keep counting */
+  renderAll();
 }
 
 /* Knowing the street (his call Nov 17: "I am here, it should know the street").
@@ -1275,6 +1405,7 @@ function exportLimitIcs() {
   var t = getLimitTimer();
   if (!t) return;
   var lim = limitForSide();
+  if (lim && limitExempted(lim)) return; /* an exempted limit has no timer and no .ics */
   var end = null;
   if (lim) {
     var dl = limitDeadlineMs(lim, t.parkedAt);
@@ -1371,6 +1502,13 @@ function init() {
   ["planDate", "planTime"].forEach(function (id) {
     var n = el(id);
     if (n) n.addEventListener("input", function () { renderPlanAhead(); });
+  });
+  var po = el("permitOptions");
+  if (po) po.addEventListener("change", function (e) {
+    var t = e.target || e.srcElement;
+    if (!t || !t.getAttribute) return;
+    var s = t.getAttribute("data-permit-sector");
+    if (s) onPermitToggle(s, !!t.checked);
   });
   var tiles = document.querySelectorAll("#limitTiles .limittile");
   for (var i = 0; i < tiles.length; i++) {
@@ -2419,6 +2557,13 @@ if (typeof window !== "undefined") {
     renderPlanAhead: renderPlanAhead, planResultText: planResultText,
     planChosenMs: planChosenMs, setPlanOpen: setPlanOpen,
     nextWindowForSideData: nextWindowForSideData,
+    getHeldPermits: getHeldPermits, setHeldPermits: setHeldPermits,
+    holdsPermitFor: holdsPermitFor, sectorOfException: sectorOfException,
+    limitExempted: limitExempted, windowExempted: windowExempted,
+    effectiveLimit: effectiveLimit, permitLimitStatement: permitLimitStatement,
+    permitSectors: permitSectors, renderPermitSetting: renderPermitSetting,
+    onPermitToggle: onPermitToggle, PERMITS_KEY: PERMITS_KEY,
+    renderLimit: renderLimit, exportLimitIcs: exportLimitIcs,
     renderHero: renderHero };
 }
 </script>
