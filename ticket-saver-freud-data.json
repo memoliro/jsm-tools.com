@@ -105,7 +105,11 @@
      "photo_url": "assets/freud-even-bagged-sign.jpg",
      "photo_note": "Photographed by memoli Nov 17, 2026 — the sign on this side is covered with a black bag, so no rule can be read from it and no restriction is in effect from this pole."
     }
-   ]
+   ],
+   "paid": {
+    "status": "unknown",
+    "reason": "Côte Saint-Luc is outside the City of Montreal's paid-parking dataset."
+   }
   },
   "odd": {
    "label": "Odd numbers side",
@@ -121,7 +125,11 @@
      "photo_url": "assets/freud-odd-bagged-sign.jpg",
      "photo_note": "Photographed by memoli Nov 17, 2026 — the sign on this side is covered with a black bag, so no rule can be read from it and no restriction is in effect from this pole."
     }
-   ]
+   ],
+   "paid": {
+    "status": "unknown",
+    "reason": "Côte Saint-Luc is outside the City of Montreal's paid-parking dataset."
+   }
   }
  },
  "streets": [

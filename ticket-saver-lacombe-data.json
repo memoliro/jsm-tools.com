@@ -174,7 +174,12 @@
      "photo_note": "Photographed by memoli Nov 17, 2026 (07:58, at the job site). This sign is not in the City of Montreal signage data — no 12H-14H code exists in the codification table and no 12H/14H sign stands in the box around 4610. Exact stretch unconfirmed.",
      "photo_url": "assets/lacombe-even-12h14h-sign.jpg"
     }
-   ]
+   ],
+   "paid": {
+    "status": "free",
+    "as_of": "2026-11-11",
+    "source": "Agence de mobilité durable — Stationnements municipaux tarifés, sur rue et hors rue"
+   }
   },
   "odd": {
    "label": "Odd numbers side",
@@ -196,7 +201,12 @@
      "photo_url": "assets/lacombe-odd-9h30-11h30-sign.jpg",
      "photo_note": "Photographed by memoli Nov 17, 2026 — this sign stands on the odd side."
     }
-   ]
+   ],
+   "paid": {
+    "status": "free",
+    "as_of": "2026-11-11",
+    "source": "Agence de mobilité durable — Stationnements municipaux tarifés, sur rue et hors rue"
+   }
   }
  },
  "streets": [
